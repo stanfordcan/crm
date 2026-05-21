@@ -132,7 +132,6 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
       <h1>📋 客戶追蹤系統</h1>
       <div class="hbtns">
         <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
-        <button class="hbtn" style="background:#F3E8FF;color:#7C3AED" onclick="forceRefresh()">🔁 重新解析</button>
         <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS</button>
         <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
         <button class="hbtn" style="background:#FDECEC;color:#D63B3B" onclick="clearAllData()">🗑️ 清除</button>
@@ -184,6 +183,10 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
           </div>
         </div>
         <div class="frow"><label>備註</label><textarea id="fNote" placeholder="特殊情況、借款條件…"></textarea></div>
+        <div id="debtPhoneArea" style="display:none">
+          <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">債電（未確認）</div>
+          <div id="debtPhoneList" style="background:var(--s2);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);line-height:1.8"></div>
+        </div>
       </div>
       <div id="sp1" style="display:none">
         <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="不動產地址"/></div>
@@ -377,18 +380,7 @@ function jsonpFetch(url) {
   });
 }
 
-async function forceRefresh() {
-  if(!confirm('這會清除所有本地資料並重新從總檔解析，確定嗎？')) return;
-  clients = [];
-  nextId = 1;
-  saveLocal();
-  // Clear Google Sheet
-  try { await pushToSheet(); } catch(e) {}
-  // Re-fetch from company
-  await syncFromCompany();
-}
-
-
+async function syncFromCompany() {
   const btn=document.getElementById('companyBtn');
   btn.textContent='⏳ 讀取中…'; btn.disabled=true;
   showToast('⏳ 正在連接總檔…');
@@ -431,12 +423,19 @@ function processCompanyData(raw) {
     // Only skip if 標示部 AND 所有權部 are both empty
     if(!ownerCheck && !buildCheck) return;
 
-    // Extract all phone numbers from cell
+    // Extract confirmed phones from col 0
     const phoneMatches = rawCell.match(/0\d[\d-]{7,}/g) || [];
-    // Also match landlines like 02-xxxx
     const landlines = rawCell.match(/0[2-9]\d-?\d{4}-?\d{4}/g) || [];
     const allPhones = [...new Set([...phoneMatches, ...landlines])];
     const phone = allPhones[0] || '';
+
+    // Extract debt phones from col 12 (債電), deduplicate against confirmed phones
+    const debtRaw = String(row[12]||'').trim();
+    const debtMatches = debtRaw.match(/0\d[\d-]{7,}/g) || [];
+    const debtLandlines = debtRaw.match(/0[2-9]\d-?\d{4}-?\d{4}/g) || [];
+    const allDebtPhones = [...new Set([...debtMatches, ...debtLandlines])].filter(p =>
+      !allPhones.some(op => op.replace(/[-\s]/g,'') === p.replace(/[-\s]/g,''))
+    );
 
     // Extract name - always prioritize owner column (col 6)
     const ownerRaw = String(row[6]||'');
@@ -546,13 +545,12 @@ function processCompanyData(raw) {
       if(priv) existing.private = priv;
       if(legal) existing.legal = legal;
       if(!existing.area && area) existing.area = area;
+      if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
       existing.updatedAt = TODAY;
       updated++;
     } else {
-      // Build initial logs from process text
       const logs = [];
       if(processText) {
-        // Split process by date patterns like 1140210, 1120314 etc
         const entries = processText.split(/(?=\d{6,7}\s)/);
         entries.forEach(entry => {
           const entry2 = entry.trim();
@@ -563,12 +561,13 @@ function processCompanyData(raw) {
       clients.push({
         id: nextId++,
         name, phone,
+        debtPhones: allDebtPhones,
         heat: '最新資料',
         remind: '', remindNote: '',
         note: noteText,
         addr, area, bank, private: priv, legal,
         purpose: '', buildNo: '',
-        logs: logs.slice(0,3), // keep first 3 entries
+        logs: logs.slice(0,3),
         companyRaw,
         createdAt: TODAY, updatedAt: TODAY,
       });
@@ -710,6 +709,15 @@ function openEdit(id){
   document.getElementById('fBuildNo').value=c.buildNo||'';
   document.getElementById('fLogDate').value=TODAY;
   document.getElementById('fLogText').value='';
+  // Debt phones
+  const debtArea = document.getElementById('debtPhoneArea');
+  const debtList = document.getElementById('debtPhoneList');
+  if(c.debtPhones && c.debtPhones.length) {
+    debtArea.style.display='block';
+    debtList.innerHTML = c.debtPhones.map(p=>`<div>${p}</div>`).join('');
+  } else {
+    debtArea.style.display='none';
+  }
   // Company data tab
   if(c.companyRaw){
     const r=c.companyRaw;
