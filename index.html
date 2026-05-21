@@ -132,6 +132,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
       <h1>📋 客戶追蹤系統</h1>
       <div class="hbtns">
         <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
+        <button class="hbtn" style="background:#F3E8FF;color:#7C3AED" onclick="forceRefresh()">🔁 重新解析</button>
         <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS</button>
         <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
         <button class="hbtn" style="background:#FDECEC;color:#D63B3B" onclick="clearAllData()">🗑️ 清除</button>
@@ -376,7 +377,18 @@ function jsonpFetch(url) {
   });
 }
 
-async function syncFromCompany() {
+async function forceRefresh() {
+  if(!confirm('這會清除所有本地資料並重新從總檔解析，確定嗎？')) return;
+  clients = [];
+  nextId = 1;
+  saveLocal();
+  // Clear Google Sheet
+  try { await pushToSheet(); } catch(e) {}
+  // Re-fetch from company
+  await syncFromCompany();
+}
+
+
   const btn=document.getElementById('companyBtn');
   btn.textContent='⏳ 讀取中…'; btn.disabled=true;
   showToast('⏳ 正在連接總檔…');
@@ -414,7 +426,10 @@ function processCompanyData(raw) {
 
   rows.forEach(row => {
     const rawCell = String(row[0]||'').trim();
-    if(!rawCell) return;
+    const ownerCheck = String(row[6]||'').trim();
+    const buildCheck = String(row[3]||'').trim();
+    // Only skip if 標示部 AND 所有權部 are both empty
+    if(!ownerCheck && !buildCheck) return;
 
     // Extract all phone numbers from cell
     const phoneMatches = rawCell.match(/0\d[\d-]{7,}/g) || [];
@@ -423,30 +438,30 @@ function processCompanyData(raw) {
     const allPhones = [...new Set([...phoneMatches, ...landlines])];
     const phone = allPhones[0] || '';
 
-    // Extract name: lines that are NOT phone numbers and NOT empty
-    const lines = rawCell.split('\n').map(l=>l.trim()).filter(l=>l);
-    const nameLine = lines.find(l =>
-      !l.match(/^0\d/) &&          // not starting with 0x (phone)
-      !l.match(/^\d{2}-/) &&       // not landline
-      !l.match(/^[A-Z]\d{9}$/) &&  // not ID number
-      l.length >= 2 &&
-      l.length <= 20
-    );
-
-    // Extract name from owner column (col 6)
+    // Extract name - always prioritize owner column (col 6)
     const ownerRaw = String(row[6]||'');
-    const ownerNameMatch = ownerRaw.match(/[A-Z]\d{9,10}\s+([\u4e00-\u9fff]{2,8})/);
-    let ownerName = ownerNameMatch ? ownerNameMatch[1] : '';
+    // Match full ID: A123456789 姓名, or masked ID: A221*****8 江＊＊ or A221*****8 江某某
+    const ownerNameMatch = ownerRaw.match(/[A-Z]\d[\d*]{7,9}[\d*]\s+([\u4e00-\u9fff＊*]{2,8})/);
+    let ownerName = ownerNameMatch ? ownerNameMatch[1].replace(/[＊*]/g,'') : '';
+    // Remove if only asterisks remain
+    if(ownerName.length < 1) ownerName = '';
 
-    // If name is masked (e.g. 李**, 謝**), fallback to restriction col (col 18) for 義務人
-    const isMasked = ownerRaw.match(/[A-Z]\d+\*+/) || (ownerName && ownerName.includes('*'));
-    if (!ownerName || isMasked) {
+    // If name is masked or missing, fallback to restriction col (col 18) for 義務人
+    const isMasked = !ownerName || ownerName.includes('*') || ownerName.includes('＊');
+    if (isMasked) {
       const restrictRaw = String(row[18]||'');
       const obligorMatch = restrictRaw.match(/義務人[：:]\s*([\u4e00-\u9fff]{2,8})/);
       if (obligorMatch) ownerName = obligorMatch[1];
     }
 
-    const name = (nameLine || ownerName || '（未知）').replace(/^E\s*/, '').trim();
+    // Final fallback: try debt column (col 9)
+    if(!ownerName) {
+      const debtRaw = String(row[9]||'');
+      const debtMatch = debtRaw.match(/^([\u4e00-\u9fff]{2,6})[、，]/);
+      if(debtMatch) ownerName = debtMatch[1];
+    }
+
+    const name = (ownerName || '（未知）').trim();
 
     if(!phone && !name) { skipped++; return; }
 
@@ -454,23 +469,28 @@ function processCompanyData(raw) {
     const rightsRaw = String(row[13]||'');
     let bank=0, priv=0, legal=0;
 
-    // Extract each 【銀】【私】【法】entry
-    const entries = rightsRaw.split('\n').filter(l=>l.includes('【'));
+    // Extract each entry - support both formats:
+    // 【銀】102-02-20 ... and 【銀】民國110年08月04日...
+    const entries = rightsRaw.split('\n').filter(l=>l.match(/【[銀私法]】/));
     entries.forEach(line => {
-      const amtMatch = line.match(/新臺幣([\d,]+)元|（新臺幣([\d,]+)元）|（([\d,]+)）|\(([\d,]+)\)/);
+      // Match amount in various formats
+      const amtMatch = line.match(/新臺幣\s*([\d,]+)\s*元|（新臺幣([\d,]+)元）|（([\d,]+)）|\(([\d,]+)\)/);
       const amt = amtMatch ? Math.round(parseInt((amtMatch[1]||amtMatch[2]||amtMatch[3]||amtMatch[4]||'0').replace(/,/g,''))/10000) : 0;
       if(!amt) return;
 
       if(line.includes('【銀】')) {
-        bank += amt;
+        // Check if it's actually a legal entity (not a bank)
+        const isRealBank = /銀行|農會|信合社|信用合作|漁會/.test(line);
+        const isLegal2 = !isRealBank && /股份有限|有限公司|企業|租賃|迪和|新鑫|和勁|華財/.test(line);
+        if(isLegal2) legal += amt;
+        else bank += amt;
       } else if(line.includes('【私】') || line.includes('【法】')) {
-        // Get creditor name
-        const creditorMatch = line.match(/最高\s+(.+?)\s+[A-Z0-9]{8,}/);
-        const creditor = creditorMatch ? creditorMatch[1] : '';
-        // Bank-like institutions (even if tagged 【法】)
+        // Get creditor name - support both formats
+        const creditorMatch = line.match(/最高\s+(.+?)\s+[\dA-Z]{8,}/) ||
+                              line.match(/[\dA-Z]{8,}\s+([\u4e00-\u9fff（）\s]{2,20})\s+新臺幣/);
+        const creditor = creditorMatch ? creditorMatch[1] : line;
         const isBank = /銀行|農會|信合社|信用合作|漁會/.test(creditor);
-        // Company = legal
-        const isLegal = !isBank && /股份有限|有限公司|企業|股份|租賃|迪和|新鑫|和勁|華財/.test(creditor);
+        const isLegal = !isBank && /股份有限|有限公司|企業|租賃|迪和|新鑫|和勁|華財/.test(creditor);
         if(isBank) bank += amt;
         else if(isLegal) legal += amt;
         else priv += amt;
@@ -522,8 +542,9 @@ function processCompanyData(raw) {
     if(existing){
       existing.companyRaw = companyRaw;
       if(!existing.addr && addr) existing.addr = addr;
-      if(!existing.bank && bank) existing.bank = bank;
-      if(!existing.private && priv) existing.private = priv;
+      if(bank) existing.bank = bank;
+      if(priv) existing.private = priv;
+      if(legal) existing.legal = legal;
       if(!existing.area && area) existing.area = area;
       existing.updatedAt = TODAY;
       updated++;
@@ -635,8 +656,22 @@ function render(){
       </div>
       ${c.remindNote?`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📌${c.remindNote}</div>`:''}
       ${lastLog?`<div class="clog"><span style="color:var(--t3)">${lastLog.date}：</span>${lastLog.text}</div>`:''}
+      ${st==='over'?`<button onclick="clearRemind(event,${c.id})" style="margin-top:8px;width:100%;background:var(--rbg);color:var(--red);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ 清除逾期提醒</button>`:''}
     </div>`;
   }).join('');
+}
+
+async function clearRemind(e, id) {
+  e.stopPropagation(); // 防止觸發開啟客戶頁面
+  const c = clients.find(x=>x.id===id);
+  if(!c) return;
+  c.remind = '';
+  c.remindNote = '';
+  c.updatedAt = TODAY;
+  saveLocal();
+  try { await pushToSheet(); showToast('✅ 已清除提醒'); }
+  catch(e) { showToast('✅ 已清除提醒（本地）'); }
+  render();
 }
 
 // ── Sheet modal ───────────────────────────────────────────
