@@ -134,6 +134,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
         <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
         <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS</button>
         <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
+        <button class="hbtn" style="background:#FDECEC;color:#D63B3B" onclick="clearAllData()">🗑️ 清除</button>
       </div>
     </div>
     <div class="stats-bar" id="statsBar"></div>
@@ -715,7 +716,16 @@ async function doImport(){
 document.getElementById('sheetBg').addEventListener('click',e=>{if(e.target===document.getElementById('sheetBg'))closeSheet();});
 document.getElementById('imBg').addEventListener('click',e=>{if(e.target===document.getElementById('imBg'))closeImport();});
 
-// ── Init ──────────────────────────────────────────────────
+async function clearAllData() {
+  if(!confirm('確定要清除所有客戶資料？此動作無法復原！')) return;
+  clients = [];
+  nextId = 1;
+  saveLocal();
+  try { await pushToSheet(); } catch(e) {}
+  render();
+  showToast('🗑️ 已清除所有資料');
+}
+
 // 只清除舊版本 v1，保留 v2 資料
 localStorage.removeItem('loan_crm_v1');
 loadLocal();
