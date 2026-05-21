@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>借款客戶追蹤系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#F5F4F0;--surface:#fff;--s2:#EFEDE8;--border:#DDD9D0;--text:#1A1916;--t2:#6B6860;--t3:#A09D96;--accent:#2B5BE2;--abg:#EDF1FC;--red:#D63B3B;--rbg:#FDECEC;--green:#1D8C5E;--gbg:#E8F7F1;--orange:#C46A00;--obg:#FFF3E0;--r:14px;--rs:8px;--sh:0 2px 12px rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px 10px;position:sticky;top:0;z-index:50}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.header h1{font-size:17px;font-weight:600}
+.hbtns{display:flex;gap:6px}
+.hbtn{border:none;border-radius:99px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.hbtn-sync{background:var(--s2);color:var(--t2)}
+.hbtn-company{background:var(--gbg);color:var(--green)}
+.hbtn-xls{background:var(--abg);color:var(--accent)}
+.hbtn:active{opacity:.8}
+.hbtn:disabled{opacity:.5}
+.stats-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.stats-bar::-webkit-scrollbar{display:none}
+.spill{flex-shrink:0;background:var(--s2);border-radius:99px;padding:4px 10px;font-size:11px;color:var(--t2)}
+.spill b{font-weight:600;color:var(--text)}
+.spill.alert b{color:var(--red)}
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tbtn{flex-shrink:0;padding:9px 12px;font-size:12px;font-weight:500;color:var(--t3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap}
+.tbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.search-wrap{padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--border)}
+.search-input{width:100%;background:var(--s2);border:none;border-radius:var(--rs);padding:9px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none}
+.list-wrap{flex:1;padding:10px 14px;display:flex;flex-direction:column;gap:8px;padding-bottom:88px}
+/* Cards */
+.ccard{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:14px;cursor:pointer;border-left:4px solid transparent}
+.ccard:active{opacity:.9}
+.ccard.over{border-left-color:var(--red)}
+.ccard.today{border-left-color:var(--green)}
+.ccard.soon{border-left-color:var(--orange)}
+.ctop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px}
+.cname{font-size:15px;font-weight:600}
+.cphone{font-size:12px;color:var(--t2);margin-top:2px}
+.hbadge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;flex-shrink:0;margin-left:6px}
+.hh{background:var(--rbg);color:var(--red)}
+.hw{background:var(--obg);color:var(--orange)}
+.hc{background:var(--abg);color:var(--accent)}
+.hd{background:var(--gbg);color:var(--green)}
+.hf{background:var(--s2);color:var(--t3)}
+.cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
+.mi{font-size:11px;color:var(--t2)}
+.rchip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
+.rc-over{background:var(--rbg);color:var(--red)}
+.rc-today{background:var(--gbg);color:var(--green)}
+.rc-soon{background:var(--obg);color:var(--orange)}
+.rc-ok{background:var(--abg);color:var(--accent)}
+.clog{font-size:11px;color:var(--t2);border-top:1px solid var(--border);padding-top:6px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{text-align:center;padding:50px 20px;color:var(--t3);font-size:13px}
+.loading{text-align:center;padding:50px 20px;color:var(--t3);font-size:13px}
+/* FAB */
+.fab{position:fixed;bottom:22px;right:20px;width:52px;height:52px;background:var(--accent);color:#fff;border:none;border-radius:50%;font-size:24px;cursor:pointer;box-shadow:0 4px 18px rgba(43,91,226,.4);display:flex;align-items:center;justify-content:center;z-index:40;font-family:inherit}
+.fab:active{transform:scale(.93)}
+/* Toast */
+.toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%);background:#1A1916;color:#fff;padding:9px 18px;border-radius:99px;font-size:12px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+/* Bottom sheet */
+.sbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end}
+.sbg.open{display:flex}
+.sheet{background:var(--surface);border-radius:22px 22px 0 0;width:100%;max-height:93vh;display:flex;flex-direction:column;overflow:hidden}
+.shandle{width:34px;height:4px;background:var(--border);border-radius:99px;margin:11px auto 0;flex-shrink:0}
+.sheader{padding:13px 18px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.stitle{font-size:16px;font-weight:600}
+.xbtn{background:var(--s2);border:none;border-radius:50%;width:28px;height:28px;font-size:15px;cursor:pointer;color:var(--t2);display:flex;align-items:center;justify-content:center;font-family:inherit}
+.stabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.stab{flex:1;padding:9px;font-size:12px;font-weight:500;color:var(--t3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.stab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.sbody{flex:1;overflow-y:auto;padding:14px 18px 20px}
+/* Form */
+.frow{margin-bottom:12px}
+.frow label{display:block;font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.frow input,.frow select,.frow textarea{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none}
+.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--accent);background:#fff}
+.frow textarea{height:85px;resize:none;line-height:1.5}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rbox{background:var(--abg);border-radius:var(--rs);padding:13px;margin-bottom:12px;border:1px solid #C5D5F8}
+.rbox>label{font-size:12px;font-weight:600;color:var(--accent);display:block;margin-bottom:9px}
+/* Logs */
+.log-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.litem{background:var(--s2);border-radius:var(--rs);padding:11px 13px}
+.ldate{font-size:11px;color:var(--t3);margin-bottom:3px;font-weight:600}
+.ltext{font-size:13px;line-height:1.5;padding-right:26px}
+.ldel{float:right;background:none;border:none;color:var(--t3);font-size:15px;cursor:pointer;margin-top:-1px}
+.add-log{background:var(--s2);border-radius:var(--rs);padding:13px}
+.add-log>label{font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:7px}
+.alrow{display:flex;gap:7px;margin-bottom:7px}
+.alrow input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-size:13px;font-family:inherit;outline:none;-webkit-appearance:none}
+.alrow input:first-child{flex:0 0 115px}
+.albtn{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:9px;font-size:12px;font-weight:600;color:var(--accent);cursor:pointer;font-family:inherit}
+/* Company data section */
+.company-info{background:var(--s2);border-radius:var(--rs);padding:12px 13px;margin-bottom:12px}
+.company-info-title{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px}
+.company-row{font-size:12px;color:var(--t2);margin-bottom:4px;line-height:1.5}
+.company-row b{color:var(--text);font-weight:500}
+/* Footer */
+.sfooter{padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:9px;flex-shrink:0;background:var(--surface)}
+.bdel{background:var(--rbg);color:var(--red);border:none;border-radius:var(--rs);padding:11px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.bsave{flex:1;background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.bsave:disabled{opacity:.5}
+/* Import modal */
+.imbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:150;align-items:center;justify-content:center;padding:18px}
+.imbg.open{display:flex}
+.immodal{background:var(--surface);border-radius:var(--r);padding:22px 18px;width:100%;max-width:420px}
+.immodal h3{font-size:15px;font-weight:600;margin-bottom:5px}
+.immodal p{font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.6}
+.imdrop{border:2px dashed var(--border);border-radius:var(--rs);padding:26px 16px;text-align:center;cursor:pointer;margin-bottom:12px}
+.imdrop:hover{border-color:var(--accent);background:var(--abg)}
+.imdrop .icon{font-size:28px;margin-bottom:6px}
+.imdrop p{font-size:12px;color:var(--t3);margin:0}
+.imdrop input{display:none}
+.imprev{background:var(--s2);border-radius:var(--rs);padding:11px 13px;font-size:12px;margin-bottom:12px;display:none}
+.imbtns{display:flex;gap:9px}
+.imcancel{flex:1;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--t2)}
+.imgo{flex:2;background:var(--green);color:#fff;border:none;border-radius:var(--rs);padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.imgo:disabled{opacity:.5}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <h1>📋 客戶追蹤系統</h1>
+      <div class="hbtns">
+        <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
+        <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS</button>
+        <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
+      </div>
+    </div>
+    <div class="stats-bar" id="statsBar"></div>
+  </div>
+  <div class="tabs" id="tabsWrap"></div>
+  <div class="search-wrap">
+    <input class="search-input" id="searchInput" placeholder="🔍 搜尋姓名或電話…" oninput="render()"/>
+  </div>
+  <div class="list-wrap" id="listWrap"><div class="loading">⏳ 載入中…</div></div>
+</div>
+<button class="fab" onclick="openAdd()">＋</button>
+<div class="toast" id="toast"></div>
+
+<!-- Client Sheet -->
+<div class="sbg" id="sheetBg">
+  <div class="sheet">
+    <div class="shandle"></div>
+    <div class="sheader">
+      <span class="stitle" id="sheetTitle">新增客戶</span>
+      <button class="xbtn" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="stabs">
+      <button class="stab active" onclick="sSTab(0,this)">基本</button>
+      <button class="stab" onclick="sSTab(1,this)">不動產</button>
+      <button class="stab" onclick="sSTab(2,this)">聯絡記錄</button>
+      <button class="stab" onclick="sSTab(3,this)">公司資料</button>
+    </div>
+    <div class="sbody">
+      <div id="sp0">
+        <div class="frow"><label>姓名 *</label><input id="fName" placeholder="客戶姓名"/></div>
+        <div class="frow"><label>電話 *</label><input id="fPhone" type="tel" placeholder="0912-345-678"/></div>
+        <div class="frow"><label>追蹤熱度</label>
+          <select id="fHeat">
+            <option value="最新資料">🔵 最新資料</option>
+            <option value="覆訪">🟡 覆訪</option>
+            <option value="追很緊">🔴 追很緊</option>
+            <option value="已成功">🟢 已成功</option>
+            <option value="已放棄">⚫ 已放棄</option>
+          </select>
+        </div>
+        <div class="rbox">
+          <label>🔔 下次聯絡提醒</label>
+          <div class="fg2">
+            <div class="frow" style="margin:0"><label>日期</label><input type="date" id="fRemind"/></div>
+            <div class="frow" style="margin:0"><label>說明</label><input id="fRemindNote" placeholder="例：再追一次"/></div>
+          </div>
+        </div>
+        <div class="frow"><label>備註</label><textarea id="fNote" placeholder="特殊情況、借款條件…"></textarea></div>
+      </div>
+      <div id="sp1" style="display:none">
+        <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="不動產地址"/></div>
+        <div class="fg2">
+          <div class="frow"><label>面積（坪）</label><input type="number" id="fArea" placeholder="35"/></div>
+          <div class="frow"><label>借款用途</label><input id="fPurpose" placeholder="例：二胎"/></div>
+        </div>
+        <div class="fg2">
+          <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder="1200"/></div>
+          <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
+        </div>
+        <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
+      </div>
+      <div id="sp2" style="display:none">
+        <div class="log-list" id="logList"></div>
+        <div class="add-log">
+          <label>➕ 新增通話記錄</label>
+          <div class="alrow">
+            <input type="date" id="fLogDate"/>
+            <input id="fLogText" placeholder="通話內容摘要…"/>
+          </div>
+          <button class="albtn" onclick="addLog()">加入記錄</button>
+        </div>
+      </div>
+      <div id="sp3" style="display:none">
+        <div class="company-info" id="companyInfoPanel">
+          <div class="company-info-title">📊 公司總檔資料</div>
+          <div style="font-size:12px;color:var(--t3)">尚無公司資料</div>
+        </div>
+      </div>
+    </div>
+    <div class="sfooter">
+      <button class="bdel" id="btnDel" style="display:none" onclick="deleteClient()">刪除</button>
+      <button class="bsave" id="btnSave" onclick="saveClient()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- XLS Import Modal -->
+<div class="imbg" id="imBg">
+  <div class="immodal">
+    <h3>📥 匯入 XLS 檔案</h3>
+    <p>選擇公司給的 XLS 檔案，已有客戶的備註和記錄不會被覆蓋。</p>
+    <div class="imdrop" id="imDrop" onclick="document.getElementById('xlsFile').click()">
+      <div class="icon">📂</div>
+      <p>點此選擇 XLS / XLSX 檔案</p>
+      <input type="file" id="xlsFile" accept=".xls,.xlsx" onchange="handleXls(this.files[0])">
+    </div>
+    <div class="imprev" id="imPrev"></div>
+    <div class="imbtns">
+      <button class="imcancel" onclick="closeImport()">取消</button>
+      <button class="imgo" id="imGo" disabled onclick="doImport()">匯入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL     = 'https://script.google.com/macros/s/AKfycbxrlRdZM8yGQtAWM3s7WaE7cRrgM77uqCVWnosJ2nAp4Td4Xe2clAWIY6eBzpriPRaZ/exec';
+const COMPANY_URL = 'https://script.google.com/macros/s/AKfycbwqGo-iUoZktPO6F78yFZjfji-NuBg76hLvVYMce-e2hgevFWBpAh9QdEKVJ6_S45VM7g/exec';
+const TODAY = new Date().toISOString().slice(0,10);
+const LOCAL_KEY = 'loan_crm_v2';
+
+let clients = [];
+let nextId = 1;
+let editId = null;
+let curTab = 'all';
+let tempLogs = [];
+let xlsRows = [];
+
+// ── Storage ───────────────────────────────────────────────
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({clients, nextId})); } catch(e){}
+}
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LOCAL_KEY)||'null');
+    if(d){ clients=d.clients||[]; nextId=d.nextId||1; }
+  } catch(e){}
+}
+
+// ── Google Sheets sync ────────────────────────────────────
+const HDR = ['id','name','phone','heat','remind','remindNote','note','addr','area','bank','private','purpose','buildNo','logs','companyRaw','createdAt','updatedAt'];
+const toRow = c => HDR.map(h => h==='logs'?JSON.stringify(c.logs||[]):(h==='companyRaw'?JSON.stringify(c.companyRaw||{}):(c[h]??'')));
+const fromRow = row => {
+  const c={};
+  HDR.forEach((h,i)=>{
+    if(h==='logs'||h==='companyRaw'){try{c[h]=JSON.parse(row[i]||'{}');}catch{c[h]=h==='logs'?[]:{};}}
+    else if(h==='id'){c[h]=parseInt(row[i])||0;}
+    else if(['area','bank','private'].includes(h)){c[h]=parseFloat(row[i])||0;}
+    else{c[h]=row[i]??'';}
+  });
+  if(!Array.isArray(c.logs)) c.logs=[];
+  return c;
+};
+
+async function syncData() {
+  const btn=document.getElementById('syncBtn');
+  btn.textContent='⏳'; btn.disabled=true;
+  try {
+    const res = await fetch(GAS_URL);
+    const raw = await res.json();
+    if(raw&&raw.length>1){
+      clients=raw.slice(1).filter(r=>r[0]).map(fromRow);
+      nextId=clients.length?Math.max(...clients.map(c=>c.id))+1:1;
+      saveLocal(); showToast('✅ 同步成功');
+    } else { await pushToSheet(); showToast('✅ 初始化完成'); }
+  } catch(e){ showToast('⚠️ 同步失敗，使用本地資料'); }
+  btn.textContent='🔄 同步'; btn.disabled=false;
+  render();
+}
+async function pushToSheet() {
+  const rows=[HDR,...clients.map(toRow)];
+  await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'save',data:rows})});
+}
+
+// ── Company Sheet (JSONP) ─────────────────────────────────
+function jsonpFetch(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '_cb' + Date.now() + Math.floor(Math.random()*1000);
+    const s = document.createElement('script');
+    const t = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 15000);
+    window[cb] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+    s.onerror = () => {
+      cleanup();
+      reject(new Error('載入失敗'));
+    };
+    function cleanup() {
+      clearTimeout(t);
+      delete window[cb];
+      if(s.parentNode) s.parentNode.removeChild(s);
+    }
+    s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+
+async function syncFromCompany() {
+  const btn=document.getElementById('companyBtn');
+  btn.textContent='⏳ 讀取中…'; btn.disabled=true;
+  showToast('⏳ 正在連接總檔…');
+  try {
+    const raw = await jsonpFetch(COMPANY_URL);
+    if(!raw||!Array.isArray(raw)){
+      showToast('⚠️ 總檔回傳格式錯誤');
+      btn.textContent='🏢 從總檔更新'; btn.disabled=false;
+      return;
+    }
+    processCompanyData(raw);
+  } catch(e) {
+    showToast('⚠️ 總檔連接失敗：'+e.message);
+    console.error(e);
+  }
+  btn.textContent='🏢 從總檔更新'; btn.disabled=false;
+}
+
+function processCompanyData(raw) {
+  if(!raw||raw.length<3){showToast('⚠️ 總檔沒有資料');return;}
+
+  // Row 0: short headers, Row 1: full headers, Row 2+: data
+  const rows = raw.slice(2);
+
+  // Column indices (confirmed from real data):
+  // 0 = 電話欄（含姓名+電話，換行分隔）
+  // 1 = 拜訪過程
+  // 2 = 備註
+  // 4 = 門牌地址
+  // 5 = 面積
+  // 6 = 建物所有權部（含所有權人姓名）
+  // 13 = 他項權利部（含銀行/民間金額）
+
+  let added=0, updated=0, skipped=0;
+
+  rows.forEach(row => {
+    const rawCell = String(row[0]||'').trim();
+    if(!rawCell) return;
+
+    // Extract all phone numbers from cell
+    const phoneMatches = rawCell.match(/0\d[\d-]{7,}/g) || [];
+    // Also match landlines like 02-xxxx
+    const landlines = rawCell.match(/0[2-9]\d-?\d{4}-?\d{4}/g) || [];
+    const allPhones = [...new Set([...phoneMatches, ...landlines])];
+    const phone = allPhones[0] || '';
+
+    // Extract name: lines that are NOT phone numbers and NOT empty
+    const lines = rawCell.split('\n').map(l=>l.trim()).filter(l=>l);
+    const nameLine = lines.find(l =>
+      !l.match(/^0\d/) &&          // not starting with 0x (phone)
+      !l.match(/^\d{2}-/) &&       // not landline
+      !l.match(/^[A-Z]\d{9}$/) &&  // not ID number
+      l.length >= 2 &&
+      l.length <= 20
+    );
+
+    // Fallback: extract Chinese name from owner column
+    const ownerRaw = String(row[6]||'');
+    const ownerNameMatch = ownerRaw.match(/[A-Z]\d{9,10}\s+([\u4e00-\u9fff]{2,6})/);
+    const ownerName = ownerNameMatch ? ownerNameMatch[1] : '';
+
+    const name = (nameLine || ownerName || '（未知）').replace(/^E\s*/, '').trim();
+
+    if(!phone && !name) { skipped++; return; }
+
+    // Parse bank/private from rights column (col 13)
+    const rightsRaw = String(row[13]||'');
+    const bankMatch  = rightsRaw.match(/銀行[：:]\s*([\d,]+)/);
+    const privMatch  = rightsRaw.match(/民間[：:]\s*([\d,]+)/);
+    const bank  = bankMatch ? Math.round(parseInt(bankMatch[1].replace(/,/g,''))/10000) : 0;
+    const priv  = privMatch ? Math.round(parseInt(privMatch[1].replace(/,/g,''))/10000) : 0;
+
+    // Parse area (col 5)
+    const areaRaw = String(row[5]||'');
+    const areaMatch = areaRaw.match(/([\d.]+)/);
+    const area = areaMatch ? parseFloat(areaMatch[1]) : 0;
+
+    // Address (col 4)
+    const addr = String(row[4]||'').replace(/\n/g,' ').trim();
+
+    // Process log (col 1)
+    const processText = String(row[1]||'').trim();
+    const noteText    = String(row[2]||'').trim();
+
+    const companyRaw = {
+      phone: rawCell,
+      process: processText,
+      note: noteText,
+      addr: addr,
+      area: areaRaw,
+      owner: ownerRaw,
+      rights: rightsRaw,
+      allPhones: allPhones,
+    };
+
+    // Check if exists by any phone number
+    const normPhones = allPhones.map(p=>p.replace(/[-\s]/g,''));
+    const existing = clients.find(c => {
+      if(!c.phone) return false;
+      const cp = c.phone.replace(/[-\s]/g,'');
+      return normPhones.some(p=>p===cp);
+    });
+
+    if(existing){
+      existing.companyRaw = companyRaw;
+      if(!existing.addr && addr) existing.addr = addr;
+      if(!existing.bank && bank) existing.bank = bank;
+      if(!existing.private && priv) existing.private = priv;
+      if(!existing.area && area) existing.area = area;
+      existing.updatedAt = TODAY;
+      updated++;
+    } else {
+      // Build initial logs from process text
+      const logs = [];
+      if(processText) {
+        // Split process by date patterns like 1140210, 1120314 etc
+        const entries = processText.split(/(?=\d{6,7}\s)/);
+        entries.forEach(entry => {
+          const entry2 = entry.trim();
+          if(entry2) logs.push({ date: TODAY, text: entry2.slice(0,120) });
+        });
+      }
+
+      clients.push({
+        id: nextId++,
+        name, phone,
+        heat: '最新資料',
+        remind: '', remindNote: '',
+        note: noteText,
+        addr, area, bank, private: priv,
+        purpose: '', buildNo: '',
+        logs: logs.slice(0,3), // keep first 3 entries
+        companyRaw,
+        createdAt: TODAY, updatedAt: TODAY,
+      });
+      added++;
+    }
+  });
+
+  saveLocal();
+  pushToSheet().catch(()=>{});
+  render();
+  showToast(`✅ 總檔：新增 ${added} 筆，更新 ${updated} 筆，略過 ${skipped} 筆`);
+}
+
+// ── UI helpers ────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+function remSt(r){
+  if(!r)return null;
+  if(r<TODAY)return'over';
+  if(r===TODAY)return'today';
+  return(new Date(r)-new Date(TODAY))/86400000<=3?'soon':'ok';
+}
+function remChip(r){
+  if(!r)return'';
+  const s=remSt(r);
+  const m={over:['rc-over','⚠️ 逾期'],today:['rc-today','📞 今天'],soon:['rc-soon','⏰ 快到了'],ok:['rc-ok',r]};
+  return`<span class="rchip ${m[s][0]}">${m[s][1]}</span>`;
+}
+const hCls={'追很緊':'hh','覆訪':'hw','最新資料':'hc','已成功':'hd','已放棄':'hf'};
+const hOrd={'追很緊':0,'覆訪':1,'最新資料':2,'已成功':3,'已放棄':4};
+const rOrd={over:0,today:1,soon:2,ok:3,null:4};
+
+function updateStats(){
+  const over=clients.filter(c=>c.remind&&c.remind<TODAY&&!['已成功','已放棄'].includes(c.heat)).length;
+  const tod=clients.filter(c=>c.remind===TODAY).length;
+  document.getElementById('statsBar').innerHTML=`
+    <div class="spill ${over?'alert':''}">逾期<b>${over}</b></div>
+    <div class="spill">今日<b>${tod}</b></div>
+    <div class="spill">追很緊<b>${clients.filter(c=>c.heat==='追很緊').length}</b></div>
+    <div class="spill">總計<b>${clients.length}</b></div>
+    <div class="spill">成功<b>${clients.filter(c=>c.heat==='已成功').length}</b></div>
+  `;
+}
+function updateTabs(){
+  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'追很緊',l:'追很緊'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'已成功',l:'已成功'},{k:'已放棄',l:'已放棄'}];
+  document.getElementById('tabsWrap').innerHTML=tabs.map(t=>`<button class="tbtn ${curTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}</button>`).join('');
+}
+function setTab(t){curTab=t;render();}
+
+function render(){
+  updateStats();updateTabs();
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  let list=[...clients];
+  if(curTab==='today') list=list.filter(c=>c.remind===TODAY);
+  else if(curTab==='over') list=list.filter(c=>c.remind&&c.remind<TODAY);
+  else if(curTab!=='all') list=list.filter(c=>c.heat===curTab);
+  if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').includes(q));
+  list.sort((a,b)=>{
+    const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
+    if(ra!==rb)return ra-rb;
+    return(hOrd[a.heat]??9)-(hOrd[b.heat]??9);
+  });
+  const wrap=document.getElementById('listWrap');
+  if(!list.length){wrap.innerHTML=`<div class="empty">🔍 查無資料</div>`;return;}
+  wrap.innerHTML=list.map(c=>{
+    const st=remSt(c.remind);
+    const cls=st==='over'?'over':st==='today'?'today':st==='soon'?'soon':'';
+    const lastLog=c.logs&&c.logs.length?c.logs[0]:null;
+    const total=(c.bank||0)+(c.private||0);
+    return`<div class="ccard ${cls}" onclick="openEdit(${c.id})">
+      <div class="ctop">
+        <div><div class="cname">${c.name}</div><div class="cphone">${c.phone}</div></div>
+        <span class="hbadge ${hCls[c.heat]||''}">${c.heat}</span>
+      </div>
+      <div class="cmeta">
+        ${c.remind?remChip(c.remind):''}
+        ${total?`<span class="mi">💰${total.toLocaleString()}萬</span>`:''}
+        ${c.private?`<span class="mi" style="color:var(--red)">⚠️民間${c.private}萬</span>`:''}
+        ${c.companyRaw?`<span class="mi" style="color:var(--green)">🏢總檔</span>`:''}
+        ${c.logs&&c.logs.length?`<span class="mi">💬${c.logs.length}筆</span>`:''}
+      </div>
+      ${c.remindNote?`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📌${c.remindNote}</div>`:''}
+      ${lastLog?`<div class="clog"><span style="color:var(--t3)">${lastLog.date}：</span>${lastLog.text}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── Sheet modal ───────────────────────────────────────────
+function openAdd(){
+  editId=null;
+  document.getElementById('sheetTitle').textContent='新增客戶';
+  document.getElementById('btnDel').style.display='none';
+  ['fName','fPhone','fAddr','fBuildNo','fRemindNote','fNote','fPurpose'].forEach(id=>document.getElementById(id).value='');
+  ['fArea','fBank','fPrivate'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fHeat').value='最新資料';
+  document.getElementById('fRemind').value='';
+  document.getElementById('fLogDate').value=TODAY;
+  document.getElementById('fLogText').value='';
+  document.getElementById('companyInfoPanel').innerHTML='<div class="company-info-title">📊 公司總檔資料</div><div style="font-size:12px;color:var(--t3)">尚無公司資料</div>';
+  tempLogs=[];renderLogs();sSTabTo(0);
+  document.getElementById('sheetBg').classList.add('open');
+}
+
+function openEdit(id){
+  editId=id;
+  const c=clients.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('sheetTitle').textContent=c.name;
+  document.getElementById('btnDel').style.display='';
+  document.getElementById('fName').value=c.name||'';
+  document.getElementById('fPhone').value=c.phone||'';
+  document.getElementById('fHeat').value=c.heat||'最新資料';
+  document.getElementById('fRemind').value=c.remind||'';
+  document.getElementById('fRemindNote').value=c.remindNote||'';
+  document.getElementById('fNote').value=c.note||'';
+  document.getElementById('fAddr').value=c.addr||'';
+  document.getElementById('fArea').value=c.area||'';
+  document.getElementById('fBank').value=c.bank||'';
+  document.getElementById('fPrivate').value=c.private||'';
+  document.getElementById('fPurpose').value=c.purpose||'';
+  document.getElementById('fBuildNo').value=c.buildNo||'';
+  document.getElementById('fLogDate').value=TODAY;
+  document.getElementById('fLogText').value='';
+  // Company data tab
+  if(c.companyRaw){
+    const r=c.companyRaw;
+    document.getElementById('companyInfoPanel').innerHTML=`
+      <div class="company-info-title">📊 公司總檔資料</div>
+      ${r.addr?`<div class="company-row"><b>地址：</b>${r.addr}</div>`:''}
+      ${r.area?`<div class="company-row"><b>面積：</b>${r.area}</div>`:''}
+      ${r.rights?`<div class="company-row"><b>貸款：</b>${r.rights.split('\n').filter(l=>l.includes('銀行')||l.includes('民間')||l.includes('總計')).join('　')}</div>`:''}
+      ${r.process?`<div class="company-row" style="margin-top:8px"><b>拜訪過程：</b><br>${r.process.replace(/\n/g,'<br>')}</div>`:''}
+      ${r.note?`<div class="company-row" style="margin-top:6px"><b>公司備註：</b>${r.note}</div>`:''}
+    `;
+  } else {
+    document.getElementById('companyInfoPanel').innerHTML='<div class="company-info-title">📊 公司總檔資料</div><div style="font-size:12px;color:var(--t3)">尚無公司資料，點「從總檔更新」匯入</div>';
+  }
+  tempLogs=[...(c.logs||[])];renderLogs();sSTabTo(0);
+  document.getElementById('sheetBg').classList.add('open');
+}
+
+function closeSheet(){document.getElementById('sheetBg').classList.remove('open');}
+
+function sSTab(i,el){
+  sSTabTo(i);
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function sSTabTo(i){
+  [0,1,2,3].forEach(j=>document.getElementById('sp'+j).style.display=j===i?'block':'none');
+  document.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('active',j===i));
+}
+
+function renderLogs(){
+  document.getElementById('logList').innerHTML=tempLogs.length
+    ?tempLogs.map((l,i)=>`<div class="litem">
+        <button class="ldel" onclick="removeLog(${i})">✕</button>
+        <div class="ldate">${l.date}</div>
+        <div class="ltext">${l.text}</div>
+      </div>`).join('')
+    :'<p style="font-size:12px;color:var(--t3);margin-bottom:10px">尚無聯絡記錄</p>';
+}
+function addLog(){
+  const d=document.getElementById('fLogDate').value;
+  const t=document.getElementById('fLogText').value.trim();
+  if(!d||!t){alert('請填寫日期和記錄內容');return;}
+  tempLogs.unshift({date:d,text:t});
+  document.getElementById('fLogText').value='';
+  renderLogs();
+}
+function removeLog(i){tempLogs.splice(i,1);renderLogs();}
+
+async function saveClient(){
+  const name=document.getElementById('fName').value.trim();
+  const phone=document.getElementById('fPhone').value.trim();
+  if(!name||!phone){alert('姓名和電話為必填');return;}
+  const btn=document.getElementById('btnSave');
+  btn.disabled=true;btn.textContent='儲存中…';
+  const data={
+    name,phone,
+    heat:document.getElementById('fHeat').value,
+    remind:document.getElementById('fRemind').value,
+    remindNote:document.getElementById('fRemindNote').value.trim(),
+    note:document.getElementById('fNote').value.trim(),
+    addr:document.getElementById('fAddr').value.trim(),
+    area:parseFloat(document.getElementById('fArea').value)||0,
+    bank:parseFloat(document.getElementById('fBank').value)||0,
+    private:parseFloat(document.getElementById('fPrivate').value)||0,
+    purpose:document.getElementById('fPurpose').value.trim(),
+    buildNo:document.getElementById('fBuildNo').value.trim(),
+    logs:[...tempLogs],
+    updatedAt:TODAY,
+  };
+  if(editId){
+    const idx=clients.findIndex(c=>c.id===editId);
+    clients[idx]={...clients[idx],...data};
+  } else {
+    clients.push({id:nextId++,createdAt:TODAY,...data});
+  }
+  saveLocal();
+  try{await pushToSheet();showToast('✅ 已儲存並同步');}
+  catch(e){showToast('💾 已存本地');}
+  btn.disabled=false;btn.textContent='儲存';
+  closeSheet();render();
+}
+
+async function deleteClient(){
+  const c=clients.find(x=>x.id===editId);
+  if(!confirm(`確定刪除「${c?.name}」？`))return;
+  clients=clients.filter(x=>x.id!==editId);
+  saveLocal();
+  try{await pushToSheet();showToast('🗑️ 已刪除');}
+  catch(e){showToast('🗑️ 已刪除（本地）');}
+  closeSheet();render();
+}
+
+// ── XLS Import ────────────────────────────────────────────
+function openImport(){
+  xlsRows=[];
+  document.getElementById('xlsFile').value='';
+  document.getElementById('imPrev').style.display='none';
+  document.getElementById('imGo').disabled=true;
+  document.getElementById('imDrop').querySelector('p').textContent='點此選擇 XLS / XLSX 檔案';
+  document.getElementById('imBg').classList.add('open');
+}
+function closeImport(){document.getElementById('imBg').classList.remove('open');}
+
+function handleXls(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      xlsRows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(xlsRows.length<3){showToast('⚠️ 檔案內容為空');return;}
+      const prev=document.getElementById('imPrev');
+      prev.style.display='block';
+      prev.innerHTML=`讀取成功！共 <b>${xlsRows.length-2}</b> 筆資料`;
+      document.getElementById('imGo').disabled=false;
+      document.getElementById('imDrop').querySelector('p').textContent=file.name;
+    }catch(err){showToast('⚠️ 無法讀取檔案');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function doImport(){
+  if(xlsRows.length<3)return;
+  processCompanyData(xlsRows);
+  closeImport();
+}
+
+document.getElementById('sheetBg').addEventListener('click',e=>{if(e.target===document.getElementById('sheetBg'))closeSheet();});
+document.getElementById('imBg').addEventListener('click',e=>{if(e.target===document.getElementById('imBg'))closeImport();});
+
+// ── Init ──────────────────────────────────────────────────
+// 只清除舊版本 v1，保留 v2 資料
+localStorage.removeItem('loan_crm_v1');
+loadLocal();
+render();
+</script>
+</body>
+</html>
