@@ -264,18 +264,69 @@ function loadLocal() {
 }
 
 // ── Google Sheets sync ────────────────────────────────────
-const HDR = ['id','name','phone','heat','remind','remindNote','note','addr','area','bank','private','purpose','buildNo','logs','companyRaw','createdAt','updatedAt'];
-const toRow = c => HDR.map(h => h==='logs'?JSON.stringify(c.logs||[]):(h==='companyRaw'?JSON.stringify(c.companyRaw||{}):(c[h]??'')));
-const fromRow = row => {
-  const c={};
-  HDR.forEach((h,i)=>{
-    if(h==='logs'||h==='companyRaw'){try{c[h]=JSON.parse(row[i]||'{}');}catch{c[h]=h==='logs'?[]:{};}}
-    else if(h==='id'){c[h]=parseInt(row[i])||0;}
-    else if(['area','bank','private'].includes(h)){c[h]=parseFloat(row[i])||0;}
-    else{c[h]=row[i]??'';}
-  });
-  if(!Array.isArray(c.logs)) c.logs=[];
-  return c;
+const HDR = ['姓名','電話','追蹤熱度','下次聯絡日期','提醒說明','門牌地址','面積(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','借款用途','建號','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
+
+const toRow = c => [
+  c.name||'',
+  c.phone||'',
+  c.heat||'',
+  c.remind||'',
+  c.remindNote||'',
+  c.addr||'',
+  c.area||'',
+  c.bank||'',
+  c.legal||'',
+  c.private||'',
+  c.purpose||'',
+  c.buildNo||'',
+  c.companyRaw?.buildInfo||'',
+  c.companyRaw?.owner||'',
+  c.companyRaw?.rights||'',
+  c.companyRaw?.process||'',
+  c.companyRaw?.note||'',
+  JSON.stringify(c.logs||[]),
+  c.note||'',
+  c.createdAt||'',
+  c.updatedAt||'',
+  c.id||'',
+];
+
+const fromRow = (row, i) => {
+  const g = (j) => row[j] ?? '';
+  let logs = [];
+  try { logs = JSON.parse(g(17)||'[]'); } catch(e){ logs=[]; }
+  let companyRaw = {};
+  if(g(12)||g(13)||g(14)||g(15)||g(16)){
+    companyRaw = {
+      buildInfo: g(12),
+      owner: g(13),
+      rights: g(14),
+      process: g(15),
+      note: g(16),
+      addr: g(5),
+      area: g(6)+'坪',
+    };
+  }
+  return {
+    id: parseInt(g(21)) || (i+1),
+    name: g(0),
+    phone: g(1),
+    heat: g(2)||'最新資料',
+    remind: g(3),
+    remindNote: g(4),
+    addr: g(5),
+    area: parseFloat(g(6))||0,
+    bank: parseFloat(g(7))||0,
+    legal: parseFloat(g(8))||0,
+    private: parseFloat(g(9))||0,
+    purpose: g(10),
+    buildNo: g(11),
+    note: g(18),
+    logs,
+    companyRaw: Object.keys(companyRaw).length ? companyRaw : null,
+    createdAt: g(19),
+    updatedAt: g(20),
+  };
 };
 
 async function syncData() {
@@ -285,7 +336,7 @@ async function syncData() {
     const res = await fetch(GAS_URL);
     const raw = await res.json();
     if(raw&&raw.length>1){
-      clients=raw.slice(1).filter(r=>r[0]).map(fromRow);
+      clients=raw.slice(1).filter(r=>r[0]).map((r,i)=>fromRow(r,i));
       nextId=clients.length?Math.max(...clients.map(c=>c.id))+1:1;
       saveLocal(); showToast('✅ 同步成功');
     } else { await pushToSheet(); showToast('✅ 初始化完成'); }
@@ -382,21 +433,59 @@ function processCompanyData(raw) {
       l.length <= 20
     );
 
-    // Fallback: extract Chinese name from owner column
+    // Extract name from owner column (col 6)
     const ownerRaw = String(row[6]||'');
-    const ownerNameMatch = ownerRaw.match(/[A-Z]\d{9,10}\s+([\u4e00-\u9fff]{2,6})/);
-    const ownerName = ownerNameMatch ? ownerNameMatch[1] : '';
+    const ownerNameMatch = ownerRaw.match(/[A-Z]\d{9,10}\s+([\u4e00-\u9fff]{2,8})/);
+    let ownerName = ownerNameMatch ? ownerNameMatch[1] : '';
+
+    // If name is masked (e.g. 李**, 謝**), fallback to restriction col (col 18) for 義務人
+    const isMasked = ownerRaw.match(/[A-Z]\d+\*+/) || (ownerName && ownerName.includes('*'));
+    if (!ownerName || isMasked) {
+      const restrictRaw = String(row[18]||'');
+      const obligorMatch = restrictRaw.match(/義務人[：:]\s*([\u4e00-\u9fff]{2,8})/);
+      if (obligorMatch) ownerName = obligorMatch[1];
+    }
 
     const name = (nameLine || ownerName || '（未知）').replace(/^E\s*/, '').trim();
 
     if(!phone && !name) { skipped++; return; }
 
-    // Parse bank/private from rights column (col 13)
+    // Parse bank/legal/private from rights column (col 13)
     const rightsRaw = String(row[13]||'');
-    const bankMatch  = rightsRaw.match(/銀行[：:]\s*([\d,]+)/);
-    const privMatch  = rightsRaw.match(/民間[：:]\s*([\d,]+)/);
-    const bank  = bankMatch ? Math.round(parseInt(bankMatch[1].replace(/,/g,''))/10000) : 0;
-    const priv  = privMatch ? Math.round(parseInt(privMatch[1].replace(/,/g,''))/10000) : 0;
+    let bank=0, priv=0, legal=0;
+
+    // Extract each 【銀】【私】【法】entry
+    const entries = rightsRaw.split('\n').filter(l=>l.includes('【'));
+    entries.forEach(line => {
+      const amtMatch = line.match(/新臺幣([\d,]+)元|（新臺幣([\d,]+)元）|（([\d,]+)）|\(([\d,]+)\)/);
+      const amt = amtMatch ? Math.round(parseInt((amtMatch[1]||amtMatch[2]||amtMatch[3]||amtMatch[4]||'0').replace(/,/g,''))/10000) : 0;
+      if(!amt) return;
+
+      if(line.includes('【銀】')) {
+        bank += amt;
+      } else if(line.includes('【私】') || line.includes('【法】')) {
+        // Get creditor name
+        const creditorMatch = line.match(/最高\s+(.+?)\s+[A-Z0-9]{8,}/);
+        const creditor = creditorMatch ? creditorMatch[1] : '';
+        // Bank-like institutions (even if tagged 【法】)
+        const isBank = /銀行|農會|信合社|信用合作|漁會/.test(creditor);
+        // Company = legal
+        const isLegal = !isBank && /股份有限|有限公司|企業|股份|租賃|迪和|新鑫|和勁|華財/.test(creditor);
+        if(isBank) bank += amt;
+        else if(isLegal) legal += amt;
+        else priv += amt;
+      }
+    });
+
+    // Fallback: use summary line if entry parsing got nothing
+    if(!bank && !priv && !legal) {
+      const bankMatch  = rightsRaw.match(/銀行[：:]\s*([\d,]+)/);
+      const privMatch  = rightsRaw.match(/民間[：:]\s*([\d,]+)/);
+      const legalMatch = rightsRaw.match(/法人[：:]\s*([\d,]+)/);
+      bank  = bankMatch  ? Math.round(parseInt(bankMatch[1].replace(/,/g,''))/10000) : 0;
+      priv  = privMatch  ? Math.round(parseInt(privMatch[1].replace(/,/g,''))/10000) : 0;
+      legal = legalMatch ? Math.round(parseInt(legalMatch[1].replace(/,/g,''))/10000) : 0;
+    }
 
     // Parse area (col 5)
     const areaRaw = String(row[5]||'');
@@ -418,6 +507,7 @@ function processCompanyData(raw) {
       area: areaRaw,
       owner: ownerRaw,
       rights: rightsRaw,
+      buildInfo: String(row[3]||'').trim(),
       allPhones: allPhones,
     };
 
@@ -455,7 +545,7 @@ function processCompanyData(raw) {
         heat: '最新資料',
         remind: '', remindNote: '',
         note: noteText,
-        addr, area, bank, private: priv,
+        addr, area, bank, private: priv, legal,
         purpose: '', buildNo: '',
         logs: logs.slice(0,3), // keep first 3 entries
         companyRaw,
@@ -537,7 +627,8 @@ function render(){
       </div>
       <div class="cmeta">
         ${c.remind?remChip(c.remind):''}
-        ${total?`<span class="mi">💰${total.toLocaleString()}萬</span>`:''}
+        ${c.bank?`<span class="mi">🏦銀行${c.bank}萬</span>`:''}
+        ${c.legal?`<span class="mi">🏢法人${c.legal}萬</span>`:''}
         ${c.private?`<span class="mi" style="color:var(--red)">⚠️民間${c.private}萬</span>`:''}
         ${c.companyRaw?`<span class="mi" style="color:var(--green)">🏢總檔</span>`:''}
         ${c.logs&&c.logs.length?`<span class="mi">💬${c.logs.length}筆</span>`:''}
@@ -589,11 +680,32 @@ function openEdit(id){
     const r=c.companyRaw;
     document.getElementById('companyInfoPanel').innerHTML=`
       <div class="company-info-title">📊 公司總檔資料</div>
-      ${r.addr?`<div class="company-row"><b>地址：</b>${r.addr}</div>`:''}
-      ${r.area?`<div class="company-row"><b>面積：</b>${r.area}</div>`:''}
-      ${r.rights?`<div class="company-row"><b>貸款：</b>${r.rights.split('\n').filter(l=>l.includes('銀行')||l.includes('民間')||l.includes('總計')).join('　')}</div>`:''}
-      ${r.process?`<div class="company-row" style="margin-top:8px"><b>拜訪過程：</b><br>${r.process.replace(/\n/g,'<br>')}</div>`:''}
-      ${r.note?`<div class="company-row" style="margin-top:6px"><b>公司備註：</b>${r.note}</div>`:''}
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px">🏠 標示部</div>
+        <div class="company-row">${(r.buildInfo||'').replace(/\n/g,'<br>') || '-'}</div>
+        <div class="company-row"><b>門牌：</b>${r.addr||'-'}</div>
+        <div class="company-row"><b>面積：</b>${r.area||'-'}</div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px">👤 所有權部</div>
+        <div class="company-row">${(r.owner||'').replace(/\n/g,'<br>') || '-'}</div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px">🏦 他項權利部</div>
+        <div class="company-row">${(r.rights||'').replace(/\n/g,'<br>') || '-'}</div>
+      </div>
+
+      ${r.process?`<div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px">📝 拜訪過程</div>
+        <div class="company-row">${r.process.replace(/\n/g,'<br>')}</div>
+      </div>`:''}
+      ${r.note?`<div>
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px">📌 公司備註</div>
+        <div class="company-row">${r.note}</div>
+      </div>`:''}
     `;
   } else {
     document.getElementById('companyInfoPanel').innerHTML='<div class="company-info-title">📊 公司總檔資料</div><div style="font-size:12px;color:var(--t3)">尚無公司資料，點「從總檔更新」匯入</div>';
