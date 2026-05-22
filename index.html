@@ -721,16 +721,22 @@ function processCompanyData(raw) {
       allPhones: allPhones,
     };
 
-    // Check if exists by any phone number OR name
+    // Check if exists by any phone number OR (name + address)
     const normPhones = allPhones.map(p=>p.replace(/[-\s\(\)#]/g,''));
     const existing = clients.find(c => {
-      // Match by phone
+      // Match by phone (strongest signal)
       if(c.phone) {
         const cp = c.phone.replace(/[-\s\(\)#]/g,'');
         if(normPhones.some(p=>p&&cp&&p===cp)) return true;
       }
-      // Match by name (if name is not 未知)
-      if(name && name!=='（未知）' && c.name === name) return true;
+      // Match by name - only if address also matches or both have no address
+      if(name && name!=='（未知）' && c.name === name) {
+        const addrA = (c.addr||'').slice(0,10);
+        const addrB = (addr||'').slice(0,10);
+        // 都沒地址，或地址前10字相同，才視為同一人
+        if(!addrA && !addrB) return true;
+        if(addrA && addrB && addrA === addrB) return true;
+      }
       return false;
     });
 
@@ -776,12 +782,14 @@ function processCompanyData(raw) {
     }
   });
 
-  // 去除重複：同名或同電話只保留第一筆
+  // 去除重複：同電話只保留一筆，同名要比對地址
   const seen = new Set();
   clients = clients.filter(c => {
     const normPhone = (c.phone||'').replace(/[-\s\(\)#]/g,'');
     const key1 = normPhone && normPhone.length > 5 ? 'p_'+normPhone : null;
-    const key2 = c.name && c.name !== '（未知）' ? 'n_'+c.name : null;
+    // 同名同地址才算重複
+    const addrKey = (c.addr||'').slice(0,10);
+    const key2 = c.name && c.name !== '（未知）' ? 'n_'+c.name+'_'+addrKey : null;
     if((key1 && seen.has(key1)) || (key2 && seen.has(key2))) return false;
     if(key1) seen.add(key1);
     if(key2) seen.add(key2);
