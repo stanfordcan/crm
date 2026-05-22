@@ -7,6 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
+/* Password screen */
+.pw-screen{position:fixed;inset:0;background:#F5F4F0;z-index:9999;display:flex;align-items:center;justify-content:center;font-family:'Noto Sans TC',sans-serif}
+.pw-box{background:#fff;border-radius:18px;padding:36px 28px;width:300px;max-width:90vw;box-shadow:0 4px 24px rgba(0,0,0,.08);text-align:center}
+.pw-box h2{font-size:18px;font-weight:600;margin-bottom:6px;color:#1A1916}
+.pw-box p{font-size:13px;color:#A09D96;margin-bottom:24px}
+.pw-input{width:100%;background:#EFEDE8;border:1px solid #DDD9D0;border-radius:10px;padding:13px 16px;font-size:20px;font-family:inherit;outline:none;text-align:center;letter-spacing:6px;color:#1A1916;-webkit-appearance:none}
+.pw-input:focus{border-color:#2B5BE2;background:#fff}
+.pw-btn{width:100%;margin-top:14px;background:#2B5BE2;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.pw-btn:active{opacity:.88}
+.pw-error{color:#D63B3B;font-size:13px;margin-top:10px;display:none}
 :root{--bg:#F5F4F0;--surface:#fff;--s2:#EFEDE8;--border:#DDD9D0;--text:#1A1916;--t2:#6B6860;--t3:#A09D96;--accent:#2B5BE2;--abg:#EDF1FC;--red:#D63B3B;--rbg:#FDECEC;--green:#1D8C5E;--gbg:#E8F7F1;--orange:#C46A00;--obg:#FFF3E0;--r:14px;--rs:8px;--sh:0 2px 12px rgba(0,0,0,.06)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
@@ -26,7 +36,11 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .spill{flex-shrink:0;background:var(--s2);border-radius:99px;padding:4px 10px;font-size:11px;color:var(--t2)}
 .spill b{font-weight:600;color:var(--text)}
 .spill.alert b{color:var(--red)}
-.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 4px;display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;flex:1}
+.tabs::-webkit-scrollbar{display:none}
+.tabs-wrap{position:relative;display:flex;align-items:center;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab-arrow{background:var(--surface);border:none;border-bottom:1px solid var(--border);padding:0 8px;font-size:20px;cursor:pointer;color:var(--t2);height:100%;flex-shrink:0;line-height:1}
+.tab-arrow:hover{color:var(--accent);background:var(--s2)}
 .tabs::-webkit-scrollbar{display:none}
 .tbtn{flex-shrink:0;padding:9px 12px;font-size:12px;font-weight:500;color:var(--t3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap}
 .tbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -48,6 +62,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .hc{background:var(--abg);color:var(--accent)}
 .hd{background:var(--gbg);color:var(--green)}
 .hf{background:var(--s2);color:var(--t3)}
+.hx{background:#F3E8FF;color:#7C3AED}
 .cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
 .mi{font-size:11px;color:var(--t2)}
 .rchip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
@@ -126,7 +141,41 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 </style>
 </head>
 <body>
-<div class="app">
+<!-- Password Screen -->
+<div class="pw-screen" id="pwScreen">
+  <div class="pw-box">
+    <h2>📋 客戶追蹤系統</h2>
+    <p>請輸入密碼以繼續</p>
+    <input class="pw-input" id="pwInput" type="password" placeholder="••••••" maxlength="10"
+      onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button class="pw-btn" onclick="checkPw()">進入</button>
+    <div class="pw-error" id="pwError">密碼錯誤，請再試一次</div>
+  </div>
+</div>
+<script>
+const PW = '870612';
+const PW_KEY = 'crm_auth';
+function checkPw(){
+  const input = document.getElementById('pwInput').value;
+  if(input === PW){
+    sessionStorage.setItem(PW_KEY, '1');
+    document.getElementById('pwScreen').style.display='none';
+    document.getElementById('mainApp').style.display='flex';
+  } else {
+    document.getElementById('pwError').style.display='block';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+  }
+}
+// Auto-unlock if already authenticated this session
+if(sessionStorage.getItem(PW_KEY)==='1'){
+  document.getElementById('pwScreen').style.display='none';
+  document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('mainApp').style.display='flex';
+  });
+}
+</script>
+<div class="app" id="mainApp" style="display:none">
   <div class="header">
     <div class="header-top">
       <h1>📋 客戶追蹤系統</h1>
@@ -139,9 +188,18 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="stats-bar" id="statsBar"></div>
   </div>
-  <div class="tabs" id="tabsWrap"></div>
-  <div class="search-wrap">
-    <input class="search-input" id="searchInput" placeholder="🔍 搜尋姓名或電話…" oninput="render()"/>
+  <div class="tabs-wrap">
+    <button class="tab-arrow tab-arrow-left" onclick="scrollTabs(-150)">&#8249;</button>
+    <div class="tabs" id="tabsWrap"></div>
+    <button class="tab-arrow tab-arrow-right" onclick="scrollTabs(150)">&#8250;</button>
+  </div>
+  <div class="search-wrap" style="display:flex;gap:8px">
+    <input class="search-input" id="searchInput" placeholder="🔍 搜尋姓名或電話…" oninput="render()" style="flex:1"/>
+    <select id="sortSelect" onchange="render()" style="background:var(--s2);border:none;border-radius:var(--rs);padding:9px 10px;font-size:13px;color:var(--text);font-family:inherit;outline:none;flex-shrink:0">
+      <option value="remind">📅 提醒日期</option>
+      <option value="heat">🔥 熱度</option>
+      <option value="created">🕐 新增時間</option>
+    </select>
   </div>
   <div class="list-wrap" id="listWrap"><div class="loading">⏳ 載入中…</div></div>
 </div>
@@ -165,14 +223,15 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
     <div class="sbody">
       <div id="sp0">
         <div class="frow"><label>姓名 *</label><input id="fName" placeholder="客戶姓名"/></div>
-        <div class="frow"><label>電話 *</label><input id="fPhone" type="tel" placeholder="0912-345-678"/></div>
+        <div class="frow"><label>電話</label><input id="fPhone" type="tel" placeholder="0912-345-678"/></div>
         <div class="frow"><label>追蹤熱度</label>
           <select id="fHeat">
             <option value="最新資料">🔵 最新資料</option>
             <option value="覆訪">🟡 覆訪</option>
             <option value="追很緊">🔴 追很緊</option>
-            <option value="已成功">🟢 已成功</option>
-            <option value="已放棄">⚫ 已放棄</option>
+            <option value="新鑫">🟣 新鑫</option>
+            <option value="已簽約">🟢 已簽約</option>
+            <option value="無效案件">⚫ 無效案件</option>
           </select>
         </div>
         <div class="rbox">
@@ -196,9 +255,12 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
         </div>
         <div class="fg2">
           <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder="1200"/></div>
-          <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
+          <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder="300"/></div>
         </div>
-        <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
+        <div class="fg2">
+          <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
+          <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
+        </div>
       </div>
       <div id="sp2" style="display:none">
         <div class="log-list" id="logList"></div>
@@ -245,7 +307,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 
 <script>
 const GAS_URL     = 'https://script.google.com/macros/s/AKfycbxrlRdZM8yGQtAWM3s7WaE7cRrgM77uqCVWnosJ2nAp4Td4Xe2clAWIY6eBzpriPRaZ/exec';
-const COMPANY_URL = 'https://script.google.com/macros/s/AKfycbwqGo-iUoZktPO6F78yFZjfji-NuBg76hLvVYMce-e2hgevFWBpAh9QdEKVJ6_S45VM7g/exec';
+const COMPANY_URL = 'https://script.google.com/macros/s/AKfycbwtB7FdQIYcXBk1IK3tN3YKL5lOf-svtYzjrNIl_S_uMTAkjSnzEwFOlc9aXBX8jDTZfQ/exec';
 const TODAY = new Date().toISOString().slice(0,10);
 const LOCAL_KEY = 'loan_crm_v2';
 
@@ -405,6 +467,30 @@ function processCompanyData(raw) {
   // Row 0: short headers, Row 1: full headers, Row 2+: data
   const rows = raw.slice(2);
 
+  // Sheet name → heat mapping (last column of each row)
+  function sheetToHeat(sheetName) {
+    const s = (sheetName||'').trim();
+    if(/覆訪/.test(s)) return '覆訪';
+    if(/追進度|追很緊|保持聯繫/.test(s)) return '追很緊';
+    if(/無效|斷聯|塗銷/.test(s)) return '無效案件';
+    if(/簽約/.test(s)) return '已簽約';
+    if(/新鑫/.test(s)) return '新鑫';
+    return '最新資料';
+  }
+
+  // Detect if row is 新鑫 format (col1 looks like ID number, col2 looks like phone)
+  function isXinXinRow(row) {
+    return String(row[6]||'').trim() === '新鑫';
+  }
+
+  function processXinXinRow(row) {
+    const name = String(row[0]||'').trim();
+    const phone = String(row[2]||'').trim().replace(/[^\d-]/g,'');
+    const addr = String(row[3]||'').trim();
+    const note = String(row[4]||'').trim();
+    return { name, phone, addr, note };
+  }
+
   // Column indices (confirmed from real data):
   // 0 = 電話欄（含姓名+電話，換行分隔）
   // 1 = 拜訪過程
@@ -417,6 +503,46 @@ function processCompanyData(raw) {
   let added=0, updated=0, skipped=0;
 
   rows.forEach(row => {
+    const sheetName = String(row[row.length-1]||'').trim();
+
+    // 新鑫格式處理
+    if(sheetName === '新鑫') {
+      const name = String(row[0]||'').trim();
+      if(!name || name.includes('_資料') || name.includes('-')) return; // 跳過標題行
+      const phone = String(row[2]||'').replace(/[^\d-]/g,'').trim();
+      const addr  = String(row[3]||'').trim();
+      const note  = String(row[4]||'').trim();
+
+      const normPhone = phone.replace(/[-\s]/g,'');
+      const existing = clients.find(c=>{
+        if(c.phone && normPhone && c.phone.replace(/[-\s]/g,'')=== normPhone) return true;
+        if(name && c.name===name) return true;
+        return false;
+      });
+      if(existing){
+        if(!existing.addr && addr) existing.addr = addr;
+        if(note && !existing.note) existing.note = note;
+        existing.heat = '新鑫';
+        existing.updatedAt = TODAY;
+        updated++;
+      } else {
+        clients.push({
+          id: nextId++,
+          name, phone, addr,
+          debtPhones: [],
+          heat: '新鑫',
+          remind: '', remindNote: '',
+          note, area: 0, bank: 0, private: 0, legal: 0,
+          purpose: '', buildNo: '',
+          logs: note ? [{date: TODAY, text: note}] : [],
+          companyRaw: null,
+          createdAt: TODAY, updatedAt: TODAY,
+        });
+        added++;
+      }
+      return;
+    }
+
     const rawCell = String(row[0]||'').trim();
     const ownerCheck = String(row[6]||'').trim();
     const buildCheck = String(row[3]||'').trim();
@@ -530,13 +656,21 @@ function processCompanyData(raw) {
       allPhones: allPhones,
     };
 
-    // Check if exists by any phone number
-    const normPhones = allPhones.map(p=>p.replace(/[-\s]/g,''));
+    // Check if exists by any phone number OR name
+    const normPhones = allPhones.map(p=>p.replace(/[-\s\(\)#]/g,''));
     const existing = clients.find(c => {
-      if(!c.phone) return false;
-      const cp = c.phone.replace(/[-\s]/g,'');
-      return normPhones.some(p=>p===cp);
+      // Match by phone
+      if(c.phone) {
+        const cp = c.phone.replace(/[-\s\(\)#]/g,'');
+        if(normPhones.some(p=>p&&cp&&p===cp)) return true;
+      }
+      // Match by name (if name is not 未知)
+      if(name && name!=='（未知）' && c.name === name) return true;
+      return false;
     });
+
+    // Get sheet name from last column and determine heat
+    const heat = sheetToHeat(sheetName);
 
     if(existing){
       existing.companyRaw = companyRaw;
@@ -546,6 +680,8 @@ function processCompanyData(raw) {
       if(legal) existing.legal = legal;
       if(!existing.area && area) existing.area = area;
       if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
+      // Update heat based on sheet name
+      existing.heat = heat;
       existing.updatedAt = TODAY;
       updated++;
     } else {
@@ -562,7 +698,7 @@ function processCompanyData(raw) {
         id: nextId++,
         name, phone,
         debtPhones: allDebtPhones,
-        heat: '最新資料',
+        heat,
         remind: '', remindNote: '',
         note: noteText,
         addr, area, bank, private: priv, legal,
@@ -573,6 +709,18 @@ function processCompanyData(raw) {
       });
       added++;
     }
+  });
+
+  // 去除重複：同名或同電話只保留第一筆
+  const seen = new Set();
+  clients = clients.filter(c => {
+    const normPhone = (c.phone||'').replace(/[-\s\(\)#]/g,'');
+    const key1 = normPhone && normPhone.length > 5 ? 'p_'+normPhone : null;
+    const key2 = c.name && c.name !== '（未知）' ? 'n_'+c.name : null;
+    if((key1 && seen.has(key1)) || (key2 && seen.has(key2))) return false;
+    if(key1) seen.add(key1);
+    if(key2) seen.add(key2);
+    return true;
   });
 
   saveLocal();
@@ -599,25 +747,30 @@ function remChip(r){
   const m={over:['rc-over','⚠️ 逾期'],today:['rc-today','📞 今天'],soon:['rc-soon','⏰ 快到了'],ok:['rc-ok',r]};
   return`<span class="rchip ${m[s][0]}">${m[s][1]}</span>`;
 }
-const hCls={'追很緊':'hh','覆訪':'hw','最新資料':'hc','已成功':'hd','已放棄':'hf'};
-const hOrd={'追很緊':0,'覆訪':1,'最新資料':2,'已成功':3,'已放棄':4};
+const hCls={'追很緊':'hh','覆訪':'hw','最新資料':'hc','已簽約':'hd','無效案件':'hf','新鑫':'hx'};
+const hOrd={'追很緊':0,'覆訪':1,'最新資料':2,'新鑫':3,'已簽約':4,'無效案件':5};
 const rOrd={over:0,today:1,soon:2,ok:3,null:4};
 
 function updateStats(){
-  const over=clients.filter(c=>c.remind&&c.remind<TODAY&&!['已成功','已放棄'].includes(c.heat)).length;
+  const over=clients.filter(c=>c.remind&&c.remind<TODAY&&!['已簽約','無效案件'].includes(c.heat)).length;
   const tod=clients.filter(c=>c.remind===TODAY).length;
   document.getElementById('statsBar').innerHTML=`
     <div class="spill ${over?'alert':''}">逾期<b>${over}</b></div>
     <div class="spill">今日<b>${tod}</b></div>
     <div class="spill">追很緊<b>${clients.filter(c=>c.heat==='追很緊').length}</b></div>
     <div class="spill">總計<b>${clients.length}</b></div>
-    <div class="spill">成功<b>${clients.filter(c=>c.heat==='已成功').length}</b></div>
+    <div class="spill">成功<b>${clients.filter(c=>c.heat==='已簽約').length}</b></div>
   `;
 }
 function updateTabs(){
-  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'追很緊',l:'追很緊'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'已成功',l:'已成功'},{k:'已放棄',l:'已放棄'}];
+  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'追很緊',l:'追很緊'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'新鑫',l:'新鑫'},{k:'已簽約',l:'已簽約'},{k:'無效案件',l:'無效案件'}];
   document.getElementById('tabsWrap').innerHTML=tabs.map(t=>`<button class="tbtn ${curTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}</button>`).join('');
 }
+function scrollTabs(dx) {
+  const tabs = document.getElementById('tabsWrap');
+  tabs.scrollBy({ left: dx, behavior: 'smooth' });
+}
+
 function setTab(t){curTab=t;render();}
 
 function render(){
@@ -628,10 +781,21 @@ function render(){
   else if(curTab==='over') list=list.filter(c=>c.remind&&c.remind<TODAY);
   else if(curTab!=='all') list=list.filter(c=>c.heat===curTab);
   if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').includes(q));
+  const sortBy = document.getElementById('sortSelect')?.value || 'remind';
   list.sort((a,b)=>{
-    const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
-    if(ra!==rb)return ra-rb;
-    return(hOrd[a.heat]??9)-(hOrd[b.heat]??9);
+    if(sortBy==='heat'){
+      const hd=(hOrd[a.heat]??9)-(hOrd[b.heat]??9);
+      if(hd!==0) return hd;
+      const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
+      return ra-rb;
+    } else if(sortBy==='created'){
+      const da=a.createdAt||'',db=b.createdAt||'';
+      return db.localeCompare(da);
+    } else {
+      const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
+      if(ra!==rb)return ra-rb;
+      return(hOrd[a.heat]??9)-(hOrd[b.heat]??9);
+    }
   });
   const wrap=document.getElementById('listWrap');
   if(!list.length){wrap.innerHTML=`<div class="empty">🔍 查無資料</div>`;return;}
@@ -655,7 +819,7 @@ function render(){
       </div>
       ${c.remindNote?`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📌${c.remindNote}</div>`:''}
       ${lastLog?`<div class="clog"><span style="color:var(--t3)">${lastLog.date}：</span>${lastLog.text}</div>`:''}
-      ${st==='over'?`<button onclick="clearRemind(event,${c.id})" style="margin-top:8px;width:100%;background:var(--rbg);color:var(--red);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ 清除逾期提醒</button>`:''}
+      ${(st==='over'||st==='today'||st==='soon')?`<button onclick="clearRemind(event,${c.id})" style="margin-top:8px;width:100%;background:var(--s2);color:var(--t2);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ 清除提醒</button>`:''}
     </div>`;
   }).join('');
 }
@@ -679,7 +843,7 @@ function openAdd(){
   document.getElementById('sheetTitle').textContent='新增客戶';
   document.getElementById('btnDel').style.display='none';
   ['fName','fPhone','fAddr','fBuildNo','fRemindNote','fNote','fPurpose'].forEach(id=>document.getElementById(id).value='');
-  ['fArea','fBank','fPrivate'].forEach(id=>document.getElementById(id).value='');
+  ['fArea','fBank','fLegal','fPrivate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fHeat').value='最新資料';
   document.getElementById('fRemind').value='';
   document.getElementById('fLogDate').value=TODAY;
@@ -704,6 +868,7 @@ function openEdit(id){
   document.getElementById('fAddr').value=c.addr||'';
   document.getElementById('fArea').value=c.area||'';
   document.getElementById('fBank').value=c.bank||'';
+  document.getElementById('fLegal').value=c.legal||'';
   document.getElementById('fPrivate').value=c.private||'';
   document.getElementById('fPurpose').value=c.purpose||'';
   document.getElementById('fBuildNo').value=c.buildNo||'';
@@ -791,7 +956,7 @@ function removeLog(i){tempLogs.splice(i,1);renderLogs();}
 async function saveClient(){
   const name=document.getElementById('fName').value.trim();
   const phone=document.getElementById('fPhone').value.trim();
-  if(!name||!phone){alert('姓名和電話為必填');return;}
+  if(!name){alert('姓名為必填');return;}
   const btn=document.getElementById('btnSave');
   btn.disabled=true;btn.textContent='儲存中…';
   const data={
@@ -803,6 +968,7 @@ async function saveClient(){
     addr:document.getElementById('fAddr').value.trim(),
     area:parseFloat(document.getElementById('fArea').value)||0,
     bank:parseFloat(document.getElementById('fBank').value)||0,
+    legal:parseFloat(document.getElementById('fLegal').value)||0,
     private:parseFloat(document.getElementById('fPrivate').value)||0,
     purpose:document.getElementById('fPurpose').value.trim(),
     buildNo:document.getElementById('fBuildNo').value.trim(),
