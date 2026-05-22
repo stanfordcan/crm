@@ -522,10 +522,28 @@ function processCompanyData(raw) {
     // 新鑫格式處理
     if(sheetName === '新鑫') {
       const name = String(row[0]||'').trim();
-      if(!name || name.includes('_資料') || name.includes('-')) return; // 跳過標題行
+      if(!name || name.includes('_資料') || /^\d{4}-\d{2}-\d{2}/.test(name)) return;
       const phone = String(row[2]||'').replace(/[^\d-]/g,'').trim();
       const addr  = String(row[3]||'').trim();
       const note  = String(row[4]||'').trim();
+
+      // 如果地址是空白，合併到上一筆客戶
+      if(!addr && clients.length > 0) {
+        const prev = clients[clients.length - 1];
+        if(prev.heat === '新鑫') {
+          // 合併姓名
+          if(name && !prev.name.includes(name)) {
+            prev.name = prev.name + '／' + name;
+          }
+          // 合併電話到債電
+          if(phone && !prev.debtPhones.includes(phone)) {
+            prev.debtPhones = [...(prev.debtPhones||[]), phone + `（${name}）`];
+          }
+          prev.updatedAt = TODAY;
+          updated++;
+          return;
+        }
+      }
 
       const normPhone = phone.replace(/[-\s]/g,'');
       const existing = clients.find(c=>{
@@ -622,9 +640,8 @@ function processCompanyData(raw) {
         const isRealBank = /銀行|農會|信合社|信用合作|漁會/.test(line);
         const isLegal2 = !isRealBank && /股份有限|有限公司|企業|租賃|迪和|新鑫|和勁|華財/.test(line);
         if(isLegal2) legal += amt;
-        else bank += amt;
+        else bank += amt; // 先累加，最後再除1.2
       } else if(line.includes('【私】') || line.includes('【法】')) {
-        // Get creditor name - support both formats
         const creditorMatch = line.match(/最高\s+(.+?)\s+[\dA-Z]{8,}/) ||
                               line.match(/[\dA-Z]{8,}\s+([\u4e00-\u9fff（）\s]{2,20})\s+新臺幣/);
         const creditor = creditorMatch ? creditorMatch[1] : line;
@@ -636,14 +653,23 @@ function processCompanyData(raw) {
       }
     });
 
+    // 銀行、法人金額 ÷ 1.2，無條件進位到整數萬
+    function calcAmt(b) {
+      return Math.ceil(b / 1.2);
+    }
+    bank = calcAmt(bank);
+    legal = calcAmt(legal);
+
     // Fallback: use summary line if entry parsing got nothing
     if(!bank && !priv && !legal) {
       const bankMatch  = rightsRaw.match(/銀行[：:]\s*([\d,]+)/);
       const privMatch  = rightsRaw.match(/民間[：:]\s*([\d,]+)/);
       const legalMatch = rightsRaw.match(/法人[：:]\s*([\d,]+)/);
-      bank  = bankMatch  ? Math.round(parseInt(bankMatch[1].replace(/,/g,''))/10000) : 0;
+      const rawBank  = bankMatch  ? parseInt(bankMatch[1].replace(/,/g,''))/10000 : 0;
+      const rawLegal = legalMatch ? parseInt(legalMatch[1].replace(/,/g,''))/10000 : 0;
+      bank  = Math.ceil(rawBank  / 1.2);
+      legal = Math.ceil(rawLegal / 1.2);
       priv  = privMatch  ? Math.round(parseInt(privMatch[1].replace(/,/g,''))/10000) : 0;
-      legal = legalMatch ? Math.round(parseInt(legalMatch[1].replace(/,/g,''))/10000) : 0;
     }
 
     // Parse area (col 5)
@@ -654,9 +680,34 @@ function processCompanyData(raw) {
     // Address (col 4)
     const addr = String(row[4]||'').replace(/\n/g,' ').trim();
 
+    // Extract buildNo from col 3
+    const buildInfo = String(row[3]||'').trim();
+    const buildNoMatch = buildInfo.match(/([A-Z]_\d+_\d+_\d+-\d+)/);
+    const buildNo = buildNoMatch ? buildNoMatch[1] : '';
+
     // Process log (col 1)
     const processText = String(row[1]||'').trim();
     const noteText    = String(row[2]||'').trim();
+
+    // 如果電話欄空白且有建號，嘗試合併到上一筆相同建號的客戶
+    if(!rawCell && buildNo && clients.length > 0) {
+      const prevSameBuilding = clients.find(c =>
+        c.buildNo && c.buildNo === buildNo
+      );
+      if(prevSameBuilding) {
+        // 合併所有權人姓名
+        if(name && name !== '（未知）' && !prevSameBuilding.name.includes(name)) {
+          prevSameBuilding.name = prevSameBuilding.name + '／' + name;
+        }
+        // 合併債電
+        if(allDebtPhones.length) {
+          prevSameBuilding.debtPhones = [...(prevSameBuilding.debtPhones||[]), ...allDebtPhones];
+        }
+        prevSameBuilding.updatedAt = TODAY;
+        updated++;
+        return;
+      }
+    }
 
     const companyRaw = {
       phone: rawCell,
@@ -666,7 +717,7 @@ function processCompanyData(raw) {
       area: areaRaw,
       owner: ownerRaw,
       rights: rightsRaw,
-      buildInfo: String(row[3]||'').trim(),
+      buildInfo: buildInfo,
       allPhones: allPhones,
     };
 
@@ -716,7 +767,7 @@ function processCompanyData(raw) {
         remind: '', remindNote: '',
         note: noteText,
         addr, area, bank, private: priv, legal,
-        purpose: '', buildNo: '',
+        purpose: '', buildNo,
         logs: logs.slice(0,3),
         companyRaw,
         createdAt: TODAY, updatedAt: TODAY,
