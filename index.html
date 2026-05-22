@@ -278,17 +278,26 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
       <div id="sp1" style="display:none">
         <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="不動產地址"/></div>
         <div class="fg2">
-          <div class="frow"><label>面積（坪）</label><input type="number" id="fArea" placeholder="35"/></div>
           <div class="frow"><label>借款用途</label><input id="fPurpose" placeholder="例：二胎"/></div>
+          <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
         </div>
+        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;padding-top:8px;border-top:1px solid var(--border)">📐 面積</div>
+        <div class="fg2">
+          <div class="frow"><label>總面積（坪）</label><input type="number" id="fArea" placeholder="35" oninput="syncEvalArea()"/></div>
+          <div class="frow"><label>主建物（坪）</label><input type="number" id="fMainArea" placeholder="25"/></div>
+        </div>
+        <div class="fg2">
+          <div class="frow"><label>附屬（坪）</label><input type="number" id="fSubArea" placeholder="3"/></div>
+          <div class="frow"><label>公設（坪）</label><input type="number" id="fCommonArea" placeholder="7"/></div>
+        </div>
+        <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="0" oninput="syncEvalPark()"/></div>
+        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;padding-top:8px;border-top:1px solid var(--border)">🏦 貸款</div>
         <div class="fg2">
           <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder="1200"/></div>
           <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder="300"/></div>
         </div>
-        <div class="fg2">
-          <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
-          <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
-        </div>
+        <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
+        <div class="frow"><label>土地地號（共同擔保）</label><textarea id="fLandNo" style="height:60px" placeholder="自動帶入"></textarea></div>
       </div>
       <div id="sp2" style="display:none">
         <div class="log-list" id="logList"></div>
