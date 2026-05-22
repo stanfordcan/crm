@@ -361,14 +361,19 @@ function loadLocal() {
 }
 
 // ── Google Sheets sync ────────────────────────────────────
-const HDR = ['姓名','電話','追蹤熱度','下次聯絡日期','提醒說明','門牌地址','面積(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','借款用途','建號','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
+const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','面積(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','借款用途','建號','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
 
 const toRow = c => [
   c.name||'',
   c.phone||'',
+  c.idno||'',
   c.heat||'',
   c.remind||'',
+  c.remindTime||'',
   c.remindNote||'',
+  c.job||'',
+  c.jobYears||'',
+  JSON.stringify(c.finProofs||[]),
   c.addr||'',
   c.area||'',
   c.bank||'',
@@ -390,39 +395,46 @@ const toRow = c => [
 
 const fromRow = (row, i) => {
   const g = (j) => row[j] ?? '';
-  let logs = [];
-  try { logs = JSON.parse(g(17)||'[]'); } catch(e){ logs=[]; }
+  let logs = [], finProofs = [];
+  try { logs = JSON.parse(g(22)||'[]'); } catch(e){ logs=[]; }
+  try { finProofs = JSON.parse(g(9)||'[]'); } catch(e){ finProofs=[]; }
   let companyRaw = {};
-  if(g(12)||g(13)||g(14)||g(15)||g(16)){
+  if(g(17)||g(18)||g(19)||g(20)||g(21)){
     companyRaw = {
-      buildInfo: g(12),
-      owner: g(13),
-      rights: g(14),
-      process: g(15),
-      note: g(16),
-      addr: g(5),
-      area: g(6)+'坪',
+      buildInfo: g(17),
+      owner: g(18),
+      rights: g(19),
+      process: g(20),
+      note: g(21),
+      addr: g(10),
+      area: g(11)+'坪',
     };
   }
   return {
-    id: parseInt(g(21)) || (i+1),
+    id: parseInt(g(26)) || (i+1),
     name: g(0),
     phone: String(g(1)||''),
-    heat: g(2)||'最新資料',
-    remind: g(3),
-    remindNote: g(4),
-    addr: g(5),
-    area: parseFloat(g(6))||0,
-    bank: parseFloat(g(7))||0,
-    legal: parseFloat(g(8))||0,
-    private: parseFloat(g(9))||0,
-    purpose: g(10),
-    buildNo: g(11),
-    note: g(18),
+    idno: g(2),
+    heat: g(3)||'最新資料',
+    remind: g(4),
+    remindTime: g(5),
+    remindNote: g(6),
+    job: g(7),
+    jobYears: g(8),
+    finProofs,
+    addr: g(10),
+    area: parseFloat(g(11))||0,
+    bank: parseFloat(g(12))||0,
+    legal: parseFloat(g(13))||0,
+    private: parseFloat(g(14))||0,
+    purpose: g(15),
+    buildNo: g(16),
+    note: g(23),
     logs,
     companyRaw: Object.keys(companyRaw).length ? companyRaw : null,
-    createdAt: g(19),
-    updatedAt: g(20),
+    createdAt: g(24),
+    updatedAt: g(25),
+    debtPhones: [],
   };
 };
 
