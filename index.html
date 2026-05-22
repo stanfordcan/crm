@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>借款客戶追蹤系統</title>
@@ -52,7 +51,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .ccard:active{opacity:.9}
 .ccard.over{border-left-color:var(--red)}
 .ccard.today{border-left-color:var(--green)}
-.ccard.soon{border-left-color:var(--orange)}
+.ccard.soon{border-left-color:#0369A1}
 .ctop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px}
 .cname{font-size:15px;font-weight:600}
 .cphone{font-size:12px;color:var(--t2);margin-top:2px}
@@ -68,7 +67,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .rchip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
 .rc-over{background:var(--rbg);color:var(--red)}
 .rc-today{background:var(--gbg);color:var(--green)}
-.rc-soon{background:var(--obg);color:var(--orange)}
+.rc-soon{background:#E0F2FE;color:#0369A1}
 .rc-ok{background:var(--abg);color:var(--accent)}
 .clog{font-size:11px;color:var(--t2);border-top:1px solid var(--border);padding-top:6px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .empty{text-align:center;padding:50px 20px;color:var(--t3);font-size:13px}
@@ -265,7 +264,13 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
           <label>🔔 下次聯絡提醒</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
             <div class="frow" style="margin:0"><label>日期</label><input type="date" id="fRemind"/></div>
-            <div class="frow" style="margin:0"><label>時間</label><input type="time" id="fRemindTime"/></div>
+            <div class="frow" style="margin:0"><label>時間</label>
+              <div style="display:flex;gap:4px;align-items:center">
+                <select id="fRemindHour" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 6px;font-size:14px;font-family:inherit;outline:none;-webkit-appearance:none"></select>
+                <span style="font-size:14px;color:var(--t2);flex-shrink:0">:</span>
+                <select id="fRemindMin" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 6px;font-size:14px;font-family:inherit;outline:none;-webkit-appearance:none"></select>
+              </div>
+            </div>
             <div class="frow" style="margin:0"><label>說明</label><input id="fRemindNote" placeholder="再追一次"/></div>
           </div>
         </div>
@@ -276,18 +281,39 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
         </div>
       </div>
       <div id="sp1" style="display:none">
-        <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="不動產地址"/></div>
-        <div class="fg2">
-          <div class="frow"><label>面積（坪）</label><input type="number" id="fArea" placeholder="35"/></div>
-          <div class="frow"><label>借款用途</label><input id="fPurpose" placeholder="例：二胎"/></div>
+        <div class="fg2" style="grid-template-columns:2fr 1fr">
+          <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder=""/></div>
+          <div class="frow"><label>地段號</label><input id="fPurpose" placeholder=""/></div>
         </div>
         <div class="fg2">
-          <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder="1200"/></div>
-          <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder="300"/></div>
+          <div class="frow"><label>建號（共同擔保）</label><input id="fBuildNo" placeholder=""/></div>
+          <div class="frow"><label>地號（共同擔保）</label><input id="fLandNo" placeholder=""/></div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;padding-top:8px;border-top:1px solid var(--border)">📐 面積</div>
+        <div class="fg2">
+          <div class="frow"><label>總面積（坪）</label><input type="number" id="fArea" placeholder="" oninput="syncEvalArea()"/></div>
+          <div class="frow"><label>主建物（坪）</label><input type="number" id="fMainArea" placeholder=""/></div>
         </div>
         <div class="fg2">
-          <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="300"/></div>
-          <div class="frow"><label>建號</label><input id="fBuildNo" placeholder="例：A_01_0611_00235"/></div>
+          <div class="frow"><label>附屬（坪）</label><input type="number" id="fSubArea" placeholder=""/></div>
+          <div class="frow"><label>公設（坪）</label><input type="number" id="fCommonArea" placeholder=""/></div>
+        </div>
+        <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="" oninput="syncEvalPark()"/></div>
+        <div class="frow"><label>Google Drive 資料夾</label>
+          <div style="display:flex;gap:8px">
+            <input id="fDriveUrl" placeholder="尚未建立" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);font-family:inherit;outline:none" readonly/>
+            <button id="btnDrive" onclick="createDriveFolder()" style="background:var(--gbg);color:var(--green);border:none;border-radius:var(--rs);padding:10px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">📁 建立</button>
+            <button id="btnOpenDrive" onclick="openDriveFolder()" style="display:none;background:var(--abg);color:var(--accent);border:none;border-radius:var(--rs);padding:10px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">🔗 開啟</button>
+          </div>
+        </div>
+        <div class="fg2">
+          <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder=""/></div>
+          <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder=""/></div>
+        </div>
+        <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder=""/></div>
+        <div class="frow"><label>其他貸款</label>
+          <div id="extraLoanList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
+          <button onclick="addExtraLoan()" style="font-size:12px;color:var(--accent);background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;cursor:pointer;font-family:inherit;width:100%">＋ 新增貸款項目</button>
         </div>
       </div>
       <div id="sp2" style="display:none">
@@ -337,7 +363,7 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 </div>
 
 <script>
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbxrlRdZM8yGQtAWM3s7WaE7cRrgM77uqCVWnosJ2nAp4Td4Xe2clAWIY6eBzpriPRaZ/exec';
+const GAS_URL     = 'https://script.google.com/macros/s/AKfycbzycbdEYGjWC0nXjYKPnogx9_D2twWDPT8NEW6anBeLUjwPc2DRqAJi3ucHqlFqSwaN/exec';
 const COMPANY_URL = 'https://script.google.com/macros/s/AKfycbwe5hci8LjmQ2gXAiZPZ0D88sZRuW0SrHQ8rwBlVyZfjpVXIA9Pvne6zqHHE7g8HGaPMQ/exec';
 const TODAY = new Date().toISOString().slice(0,10);
 const LOCAL_KEY = 'loan_crm_v2';
@@ -350,94 +376,111 @@ let tempLogs = [];
 let xlsRows = [];
 
 // ── Storage ───────────────────────────────────────────────
+function normalizeDate(val) {
+  if(!val && val !== 0) return '';
+  const s = String(val).trim();
+  if(!s || s === '0') return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return s >= '2000-01-01' ? s : '';
+  }
+  if(/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = s.slice(0,10);
+    return d >= '2000-01-01' ? d : '';
+  }
+  const n = parseFloat(s);
+  if(!isNaN(n) && n > 36526) {
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return d.toISOString().slice(0,10);
+  }
+  return '';
+}
+
+function normalizeTime(val) {
+  if(!val) return '';
+  const s = String(val).trim();
+  // 已經是 HH:MM 格式
+  if(/^\d{2}:\d{2}$/.test(s)) return s;
+  // HH:MM:SS 格式
+  if(/^\d{2}:\d{2}:\d{2}/.test(s)) return s.slice(0,5);
+  // Excel 小數時間（0~1之間）
+  const n = parseFloat(s);
+  if(!isNaN(n) && n >= 0 && n < 1) {
+    const totalMin = Math.round(n * 24 * 60);
+    const h = Math.floor(totalMin / 60).toString().padStart(2,'0');
+    const m = (totalMin % 60).toString().padStart(2,'0');
+    return `${h}:${m}`;
+  }
+  return '';
+}
+
+function fixPhone(val) {
+  if(!val) return '';
+  const s = String(val).trim();
+  if(/^[9]\d{8}$/.test(s)) return '0'+s;
+  if(/^\d{9}$/.test(s)) return '0'+s;
+  return s;
+}
+
 function saveLocal() {
   try { localStorage.setItem(LOCAL_KEY, JSON.stringify({clients, nextId})); } catch(e){}
 }
 function loadLocal() {
   try {
     const d = JSON.parse(localStorage.getItem(LOCAL_KEY)||'null');
-    if(d){ clients=d.clients||[]; nextId=d.nextId||1; }
+    if(d){
+      clients = (d.clients||[]).map(c => ({
+        ...c,
+        remind: normalizeDate(c.remind),
+        remindTime: normalizeTime(c.remindTime),
+        logs: (c.logs||[]).map(l => ({...l, date: normalizeDate(l.date)})),
+      }));
+      nextId = d.nextId||1;
+    }
   } catch(e){}
 }
 
 // ── Google Sheets sync ────────────────────────────────────
-const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','面積(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','借款用途','建號','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
+const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','總面積(坪)','主建物(坪)','附屬(坪)','公設(坪)','車位(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','地段號','建號','地號','Drive連結','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
 
 const toRow = c => [
-  c.name||'',
-  c.phone||'',
-  c.idno||'',
-  c.heat||'',
-  c.remind||'',
-  c.remindTime||'',
-  c.remindNote||'',
-  c.job||'',
-  c.jobYears||'',
-  JSON.stringify(c.finProofs||[]),
-  c.addr||'',
-  c.area||'',
-  c.bank||'',
-  c.legal||'',
-  c.private||'',
-  c.purpose||'',
-  c.buildNo||'',
-  c.companyRaw?.buildInfo||'',
-  c.companyRaw?.owner||'',
-  c.companyRaw?.rights||'',
-  c.companyRaw?.process||'',
-  c.companyRaw?.note||'',
-  JSON.stringify(c.logs||[]),
-  c.note||'',
-  c.createdAt||'',
-  c.updatedAt||'',
-  c.id||'',
+  c.name||'', String(c.phone||''), c.idno||'', c.heat||'',
+  c.remind||'', c.remindTime||'', c.remindNote||'',
+  c.job||'', c.jobYears||'', JSON.stringify(c.finProofs||[]),
+  c.addr||'', c.area||'', c.mainArea||'', c.subArea||'', c.commonArea||'', c.parkArea||'',
+  c.bank||'', c.legal||'', c.private||'',
+  c.purpose||'', c.buildNo||'', c.landNo||'', c.driveUrl||'',
+  c.companyRaw?.buildInfo||'', c.companyRaw?.owner||'', c.companyRaw?.rights||'',
+  c.companyRaw?.process||'', c.companyRaw?.note||'',
+  JSON.stringify(c.logs||[]), c.note||'',
+  c.createdAt||'', c.updatedAt||'', c.id||'',
 ];
 
 const fromRow = (row, i) => {
   const g = (j) => row[j] ?? '';
   let logs = [], finProofs = [];
-  try { logs = JSON.parse(g(22)||'[]'); } catch(e){ logs=[]; }
+  try { logs = JSON.parse(g(28)||'[]'); logs = logs.map(l=>({...l, date: normalizeDate(l.date)})); } catch(e){ logs=[]; }
   try { finProofs = JSON.parse(g(9)||'[]'); } catch(e){ finProofs=[]; }
   let companyRaw = {};
-  if(g(17)||g(18)||g(19)||g(20)||g(21)){
-    companyRaw = {
-      buildInfo: g(17),
-      owner: g(18),
-      rights: g(19),
-      process: g(20),
-      note: g(21),
-      addr: g(10),
-      area: g(11)+'坪',
-    };
+  if(g(23)||g(24)||g(25)){
+    companyRaw = {buildInfo:g(23),owner:g(24),rights:g(25),process:g(26),note:g(27),addr:g(10),area:g(11)+'坪'};
   }
   return {
-    id: parseInt(g(26)) || (i+1),
-    name: g(0),
-    phone: String(g(1)||''),
-    idno: g(2),
-    heat: g(3)||'最新資料',
-    remind: g(4),
-    remindTime: g(5),
-    remindNote: g(6),
-    job: g(7),
-    jobYears: g(8),
-    finProofs,
-    addr: g(10),
-    area: parseFloat(g(11))||0,
-    bank: parseFloat(g(12))||0,
-    legal: parseFloat(g(13))||0,
-    private: parseFloat(g(14))||0,
-    purpose: g(15),
-    buildNo: g(16),
-    note: g(23),
-    logs,
+    id: parseInt(g(32)) || (i+1),
+    name:g(0), phone:fixPhone(g(1)), idno:g(2), heat:g(3)||'最新資料',
+    remind:normalizeDate(g(4)), remindTime:normalizeTime(g(5)), remindNote:g(6),
+    job:g(7), jobYears:g(8), finProofs,
+    addr:g(10),
+    area:parseFloat(g(11))||0, mainArea:parseFloat(g(12))||0,
+    subArea:parseFloat(g(13))||0, commonArea:parseFloat(g(14))||0, parkArea:parseFloat(g(15))||0,
+    bank:parseFloat(g(16))||0, legal:parseFloat(g(17))||0, private:parseFloat(g(18))||0,
+    purpose:g(19), buildNo:g(20), landNo:g(21), driveUrl:g(22),
+    note:g(29), logs,
     companyRaw: Object.keys(companyRaw).length ? companyRaw : null,
-    createdAt: g(24),
-    updatedAt: g(25),
-    debtPhones: [],
+    createdAt:g(30), updatedAt:g(31), debtPhones:[],
   };
 };
 
+// ── Sync ──────────────────────────────────────────────────
 async function syncData() {
   const btn=document.getElementById('syncBtn');
   btn.textContent='⏳'; btn.disabled=true;
@@ -483,6 +526,30 @@ function jsonpFetch(url) {
     s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
     document.head.appendChild(s);
   });
+}
+
+async function createDriveFolder(){
+  const name = document.getElementById('fName').value.trim();
+  if(!name){alert('請先填寫客戶姓名');return;}
+  const btn = document.getElementById('btnDrive');
+  btn.textContent='⏳ 建立中…';btn.disabled=true;
+  try{
+    const data = await jsonpFetch(GAS_URL+'?action=createFolder&name='+encodeURIComponent(name));
+    if(data&&data.status==='ok'&&data.url){
+      document.getElementById('fDriveUrl').value=data.url;
+      document.getElementById('btnOpenDrive').style.display='';
+      btn.textContent='✅ 已建立';
+      showToast('📁 資料夾建立成功！');
+    } else {
+      showToast('⚠️ 建立失敗');btn.textContent='📁 建立';
+    }
+  }catch(e){showToast('⚠️ 建立失敗：'+e.message);btn.textContent='📁 建立';}
+  btn.disabled=false;
+}
+
+function openDriveFolder(){
+  const url = document.getElementById('fDriveUrl').value;
+  if(url) window.open(url,'_blank');
 }
 
 async function syncFromCompany() {
@@ -729,17 +796,66 @@ function processCompanyData(raw) {
     }
 
     // Parse area (col 5)
+    // 從標示部解析總面積、主建物、附屬、公設
+    const buildInfo3 = String(row[3]||'').replace(/\n/g,' ');
     const areaRaw = String(row[5]||'');
-    const areaMatch = areaRaw.match(/([\d.]+)/);
-    const area = areaMatch ? parseFloat(areaMatch[1]) : 0;
+    const areaFromBI = parseFloat((buildInfo3.match(/[（(]([\d.]+)坪[）)]/)||[])[1])||0;
+    const areaFromCol5 = parseFloat((areaRaw.match(/[（(]([\d.]+)坪[）)]/)||areaRaw.match(/([\d.]+)坪/)||[])[1])||0;
+    const mainArea   = parseFloat((buildInfo3.match(/主建\(([\d.]+)\)/)||[])[1])||0;
+    const subArea    = parseFloat((buildInfo3.match(/附屬\(([\d.]+)\)/)||[])[1])||0;
+    const commonArea = parseFloat((buildInfo3.match(/公設\(([\d.]+)/)||[])[1])||0;
+    // 總面積：優先從標示部抓，若無則用主建+附屬+公設加總
+    const areaCalc = mainArea + subArea + commonArea;
+    const area = areaFromBI || areaFromCol5 || (areaCalc > 0 ? Math.round(areaCalc*100)/100 : 0);
 
     // Address (col 4)
     const addr = String(row[4]||'').replace(/\n/g,' ').trim();
 
-    // Extract buildNo from col 3
+    // Extract buildInfo from col 3 (for display only)
     const buildInfo = String(row[3]||'').trim();
-    const buildNoMatch = buildInfo.match(/([A-Z]_\d+_\d+_\d+-\d+)/);
-    const buildNo = buildNoMatch ? buildNoMatch[1] : '';
+
+    // 從共同擔保建號（col 11）解析建號，去重複只留編號
+    const guaranteeRaw = String(row[11]||'');
+    const buildSection = guaranteeRaw.match(/共同擔保建號[：:]([\s\S]*?)$/);
+    let buildNo = '';
+    if(buildSection){
+      const lines = buildSection[1].split('\n');
+      const seen = new Set(); const result = [];
+      lines.forEach(line=>{
+        line = line.trim(); if(!line) return;
+        const parts = line.split(/\s+/);
+        if(parts.length >= 2){
+          const no = parts[1]; // 第二個token是建號
+          if(!seen.has(no)){seen.add(no);result.push(no);}
+        }
+      });
+      buildNo = result.join('、');
+    }
+    // 備用：從標示部抓建號
+    if(!buildNo){
+      const buildNoMatch = buildInfo.match(/([A-Z]_\d+_\d+_\d+-\d+)/);
+      buildNo = buildNoMatch ? buildNoMatch[1] : '';
+    }
+
+    // 解析共同擔保地號，去重複，同時抓段名
+    const landSection = guaranteeRaw.match(/共同擔保地號[：:]([\s\S]*?)(?=共同擔保建號|$)/);
+    let landNos = '', sectionName = '';
+    if(landSection){
+      const lines = landSection[1].split('\n');
+      const seen = new Set(); const result = [];
+      const seenSection = new Set();
+      lines.forEach(line=>{
+        line = line.trim(); if(!line) return;
+        const parts = line.split(/\s+/);
+        if(parts.length >= 2){
+          const no = parts[1];
+          if(!seen.has(no)){seen.add(no);result.push(no);}
+          if(parts[0] && !seenSection.has(parts[0])){seenSection.add(parts[0]);}
+        }
+      });
+      landNos = result.join('、');
+      sectionName = [...seenSection].join('、');
+    }
 
     // Process log (col 1)
     const processText = String(row[1]||'').trim();
@@ -770,7 +886,7 @@ function processCompanyData(raw) {
       process: processText,
       note: noteText,
       addr: addr,
-      area: areaRaw,
+      area: areaFromBI ? `${areaFromBI}坪` : areaRaw,
       owner: ownerRaw,
       rights: rightsRaw,
       buildInfo: buildInfo,
@@ -803,11 +919,18 @@ function processCompanyData(raw) {
       existing.companyRaw = companyRaw;
       if(!existing.addr && addr) existing.addr = addr;
       if(!existing.idno && idno) existing.idno = idno;
-      if(bank) existing.bank = bank;
-      if(priv) existing.private = priv;
-      if(legal) existing.legal = legal;
-      if(!existing.area && area) existing.area = area;
+      if(bank && !existing.bank) existing.bank = bank;
+      if(priv && !existing.private) existing.private = priv;
+      if(legal && !existing.legal) existing.legal = legal;
+      if(area && !existing.area) existing.area = area;
+      if(mainArea && !existing.mainArea) existing.mainArea = mainArea;
+      if(subArea && !existing.subArea) existing.subArea = subArea;
+      if(commonArea && !existing.commonArea) existing.commonArea = commonArea;
+      if(buildNo && !existing.buildNo) existing.buildNo = buildNo;
+      if(landNos && !existing.landNo) existing.landNo = landNos;
+      if(sectionName && !existing.purpose) existing.purpose = sectionName;
       if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
+      // driveUrl 不覆蓋，保留已建立的連結
       existing.heat = heat;
       existing.updatedAt = TODAY;
       updated++;
@@ -829,8 +952,8 @@ function processCompanyData(raw) {
         remind: '', remindTime: '', remindNote: '',
         job: '', jobYears: '', finProofs: [],
         note: noteText,
-        addr, area, bank, private: priv, legal,
-        purpose: '', buildNo,
+        addr, area, mainArea, subArea, commonArea, parkArea: 0, bank, private: priv, legal,
+        purpose: sectionName, buildNo, driveUrl: '', landNo: landNos,
         logs: logs.slice(0,3),
         companyRaw,
         createdAt: TODAY, updatedAt: TODAY,
@@ -875,8 +998,16 @@ function remChip(r,rt){
   if(!r)return'';
   const s=remSt(r);
   const ts=rt?` ${rt}`:'';
-  const m={over:['rc-over',`⚠️ 逾期${ts}`],today:['rc-today',`📞 今天${ts}`],soon:['rc-soon',`⏰ 快到了${ts}`],ok:['rc-ok',r+ts]};
-  return`<span class="rchip ${m[s][0]}">${m[s][1]}</span>`;
+  const days=Math.ceil((new Date(r)-new Date(TODAY))/86400000);
+  let label='';
+  if(s==='over') label=`⚠️ 逾期${ts}`;
+  else if(s==='today') label=`📞 今天${ts}`;
+  else if(days===1) label=`📅 明天${ts}`;
+  else if(days===2) label=`📅 後天${ts}`;
+  else if(days===3) label=`📅 3天後${ts}`;
+  else label=`📅 ${r}${ts}`;
+  const cls=s==='over'?'rc-over':s==='today'?'rc-today':s==='soon'?'rc-soon':'rc-ok';
+  return`<span class="rchip ${cls}">${label}</span>`;
 }
 const hCls={'追很緊':'hh','覆訪':'hw','最新資料':'hc','已簽約':'hd','無效案件':'hf','新鑫':'hx'};
 const hOrd={'追很緊':0,'覆訪':1,'最新資料':2,'新鑫':3,'已簽約':4,'無效案件':5};
@@ -1002,16 +1133,21 @@ function openAdd(){
   editId=null;
   document.getElementById('sheetTitle').textContent='新增客戶';
   document.getElementById('btnDel').style.display='none';
-  ['fName','fPhone','fIdno','fAddr','fBuildNo','fRemindNote','fNote','fPurpose','fJob','fJobYears'].forEach(id=>document.getElementById(id).value='');
-  ['fArea','fBank','fLegal','fPrivate'].forEach(id=>document.getElementById(id).value='');
+  ['fName','fPhone','fIdno','fAddr','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fDriveUrl').value='';
+  document.getElementById('btnOpenDrive').style.display='none';
+  document.getElementById('btnDrive').textContent='📁 建立';
+  ['fArea','fMainArea','fSubArea','fCommonArea','fParkArea','fBank','fLegal','fPrivate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fHeat').value='最新資料';
   document.getElementById('fRemind').value='';
-  document.getElementById('fRemindTime').value='';
+  document.getElementById('fRemindHour').value='';
+  document.getElementById('fRemindMin').value='';
   document.getElementById('fLogDate').value=TODAY;
   document.getElementById('fLogText').value='';
   document.getElementById('companyInfoPanel').innerHTML='<div class="company-info-title">📊 公司總檔資料</div><div style="font-size:12px;color:var(--t3)">尚無公司資料</div>';
   document.getElementById('debtPhoneArea').style.display='none';
   finProofs=[];renderFinProofs();
+  extraLoans=[];renderExtraLoans();
   tempLogs=[];renderLogs();sSTabTo(0);
   document.getElementById('sheetBg').classList.add('open');
 }
@@ -1027,18 +1163,32 @@ function openEdit(id){
   document.getElementById('fIdno').value=c.idno||'';
   document.getElementById('fHeat').value=c.heat||'最新資料';
   document.getElementById('fRemind').value=c.remind||'';
-  document.getElementById('fRemindTime').value=c.remindTime||'';
+  const rt = c.remindTime||'';
+  document.getElementById('fRemindHour').value = rt ? rt.slice(0,2) : '';
+  document.getElementById('fRemindMin').value  = rt ? rt.slice(3,5) : '';
   document.getElementById('fRemindNote').value=c.remindNote||'';
   document.getElementById('fNote').value=c.note||'';
   document.getElementById('fJob').value=c.job||'';
   document.getElementById('fJobYears').value=c.jobYears||'';
   document.getElementById('fAddr').value=c.addr||'';
-  document.getElementById('fArea').value=c.area||'';
+  document.getElementById('fDriveUrl').value=c.driveUrl||'';
+  const btnOpen=document.getElementById('btnOpenDrive');
+  const btnCreate=document.getElementById('btnDrive');
+  if(c.driveUrl){btnOpen.style.display='';btnCreate.textContent='✅ 已建立';}
+  else{btnOpen.style.display='none';btnCreate.textContent='📁 建立';}
+  // 總面積：若為0則用主建+附屬+公設加總
+  const calcArea = (c.mainArea||0) + (c.subArea||0) + (c.commonArea||0);
+  document.getElementById('fArea').value = c.area || (calcArea > 0 ? Math.round(calcArea*100)/100 : '');
+  document.getElementById('fMainArea').value=c.mainArea||'';
+  document.getElementById('fSubArea').value=c.subArea||'';
+  document.getElementById('fCommonArea').value=c.commonArea||'';
+  document.getElementById('fParkArea').value=c.parkArea||'';
   document.getElementById('fBank').value=c.bank||'';
   document.getElementById('fLegal').value=c.legal||'';
   document.getElementById('fPrivate').value=c.private||'';
   document.getElementById('fPurpose').value=c.purpose||'';
   document.getElementById('fBuildNo').value=c.buildNo||'';
+  document.getElementById('fLandNo').value=c.landNo||'';
   document.getElementById('fLogDate').value=TODAY;
   document.getElementById('fLogText').value='';
   // Debt phones
@@ -1086,6 +1236,7 @@ function openEdit(id){
     document.getElementById('companyInfoPanel').innerHTML='<div class="company-info-title">📊 公司總檔資料</div><div style="font-size:12px;color:var(--t3)">尚無公司資料，點「從總檔更新」匯入</div>';
   }
   finProofs=[...(c.finProofs||[])];renderFinProofs();
+  extraLoans=[...(c.extraLoans||[])];renderExtraLoans();
   tempLogs=[...(c.logs||[])];renderLogs();sSTabTo(0);
   // 預載房價評估資料
   setTimeout(()=>renderPriceEval(c), 100);
@@ -1145,21 +1296,31 @@ function renderPriceEval(c) {
           <div class="frow" style="margin:0"><label>地段（段）</label><input id="ev_section" value="${section}" placeholder="例：延吉段三小段"/></div>
         </div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>地號</label><input id="ev_landno" placeholder="例：0218-0000"/></div>
+          <div class="frow" style="margin:0"><label>地號</label><input id="ev_landno" value="${c.landNo||''}" placeholder=""/></div>
           <div class="frow" style="margin:0"><label>土地使用分區</label><input id="ev_landzone" placeholder="例：住三"/></div>
         </div>
-        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>建號</label><input id="ev_buildno" value="${buildNo}" placeholder="例：A_01_0611_00235"/></div>
+        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>建號</label><input id="ev_buildno" value="${c.buildNo||''}" placeholder=""/></div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>地址</label><input id="ev_addr" value="${addr}" placeholder="門牌地址"/></div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>社區名稱</label><input id="ev_community" placeholder="社區或大樓名稱"/></div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>建物（坪）</label><input type="number" id="ev_buildarea" value="${area}" placeholder="35" oninput="calcTotal()"/></div>
-          <div class="frow" style="margin:0"><label>土地（坪）</label><input type="number" id="ev_landarea" placeholder="10"/></div>
+          <div class="frow" style="margin:0"><label>建物（坪）</label><input type="number" id="ev_buildarea" value="${area}" placeholder="" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0"><label>土地（坪）</label><input type="number" id="ev_landarea" placeholder=""/></div>
         </div>
         <div class="fg2" style="margin-top:8px">
           <div class="frow" style="margin:0"><label>有無車位</label>
-            <select id="ev_parking"><option value="無">無車位</option><option value="有平面車位">平面車位</option><option value="有機械車位">機械車位</option></select>
+            <select id="ev_parking" onchange="calcEvalBuildArea()">
+              <option value="無">無車位</option>
+              <option value="平面">平面車位</option>
+              <option value="機械">機械車位</option>
+            </select>
           </div>
-          <div class="frow" style="margin:0"><label>車位坪數</label><input type="number" id="ev_parkarea" placeholder="0"/></div>
+          <div class="frow" style="margin:0"><label>車位坪數</label><input type="number" id="ev_parkarea" value="${c.parkArea||''}" placeholder="" oninput="calcEvalBuildArea()"/></div>
+        </div>
+        <div class="frow" style="margin-top:8px"><label>車位權狀</label>
+          <select id="ev_park_title" onchange="calcEvalBuildArea()">
+            <option value="非獨立">非獨立權狀（扣坪數）</option>
+            <option value="獨立">獨立權狀（不扣）</option>
+          </select>
         </div>
         <div class="fg2" style="margin-top:8px">
           <div class="frow" style="margin:0"><label>總樓層／所在樓層</label><input id="ev_floors" value="${floorDisplay}" placeholder="例：3／7"/></div>
@@ -1170,28 +1331,29 @@ function renderPriceEval(c) {
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">💰 土增稅</div>
         <div class="fg2">
-          <div class="frow" style="margin:0"><label>一般（萬）</label><input type="number" id="ev_tax_general" placeholder="0"/></div>
-          <div class="frow" style="margin:0"><label>自用（萬）</label><input type="number" id="ev_tax_self" placeholder="0"/></div>
+          <div class="frow" style="margin:0"><label>一般（萬）</label><input type="number" id="ev_tax_general" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>自用（萬）</label><input type="number" id="ev_tax_self" placeholder=""/></div>
         </div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>筆數</label><input type="number" id="ev_tax_count" placeholder="1"/></div>
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🏦 貸款狀況</div>
-        <div class="frow" style="margin-bottom:8px"><label>銀行（萬）</label><input type="number" id="ev_bank" value="${c.bank||''}" placeholder="1992"/></div>
-        <div class="fg2">
-          <div class="frow" style="margin:0"><label>私人（萬）</label><input type="number" id="ev_private" value="${c.private||''}" placeholder="300"/></div>
+        ${c.bank?`<div class="frow" style="margin-bottom:8px"><label>銀行（萬）</label><input type="number" id="ev_bank" value="${c.bank||''}"/></div>`:''}
+        ${c.legal?`<div class="frow" style="margin-bottom:8px"><label>法人／租賃（萬）</label><input type="number" id="ev_legal" value="${c.legal||''}"/></div>`:''}
+        ${c.private?`<div class="fg2" style="margin-bottom:8px">
+          <div class="frow" style="margin:0"><label>民間（萬）</label><input type="number" id="ev_private" value="${c.private||''}"/></div>
           <div class="frow" style="margin:0"><label>利率（分）</label><input type="number" id="ev_rate" placeholder="1.5" step="0.1"/></div>
-        </div>
+        </div>`:''}
+        ${(c.extraLoans||[]).map((l,i)=>l.name?`<div class="frow" style="margin-bottom:6px"><label>${l.name}（萬）</label><input type="number" id="ev_extra_${i}" value="${l.amount||''}"/></div>`:'').join('')}
+        ${!c.bank&&!c.legal&&!c.private&&!(c.extraLoans||[]).length?`<div style="font-size:12px;color:var(--t3)">尚無貸款資料</div>`:''}
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🔍 物件評估</div>
-        <div class="frow" style="margin-bottom:8px"><label>屋況</label><input id="ev_condition" placeholder="例：良好、需整修"/></div>
-        <div class="frow" style="margin-bottom:8px"><label>抗性</label><input id="ev_resistance" placeholder="例：無、頂樓、一樓"/></div>
-        <div class="frow" style="margin-bottom:0"><label>凶宅查詢</label>
-          <select id="ev_jinzhai"><option value="非凶宅">非凶宅</option><option value="待查詢">待查詢</option><option value="凶宅">凶宅</option></select>
-        </div>
+        <div class="frow" style="margin-bottom:8px"><label>屋況</label><input id="ev_condition" value="無" placeholder="例：良好、需整修"/></div>
+        <div class="frow" style="margin-bottom:8px"><label>抗性</label><input id="ev_resistance" value="無" placeholder="例：無、頂樓、一樓"/></div>
+        <div class="frow" style="margin-bottom:0"><label>凶宅查詢</label><input id="ev_jinzhai" value="無"/></div>
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
@@ -1211,6 +1373,20 @@ function renderPriceEval(c) {
       </div>
     </div>
   `;
+}
+
+function calcEvalBuildArea(){
+  const c = editId ? clients.find(x=>x.id===editId) : null;
+  const totalArea = c ? (c.area || (c.mainArea||0)+(c.subArea||0)+(c.commonArea||0)) : 0;
+  const parking = document.getElementById('ev_parking')?.value;
+  const parkArea = parseFloat(document.getElementById('ev_parkarea')?.value)||0;
+  const isIndependent = document.getElementById('ev_park_title')?.value === '獨立';
+  let buildArea = totalArea;
+  if(parking !== '無' && parkArea && !isIndependent){
+    buildArea = Math.round((totalArea - parkArea)*100)/100;
+  }
+  if(document.getElementById('ev_buildarea')) document.getElementById('ev_buildarea').value = buildArea||'';
+  calcTotal();
 }
 
 function calcTotal() {
@@ -1241,8 +1417,9 @@ function generateReport(clientId) {
 總樓層：${g('ev_floors')}層
 屋齡：${g('ev_age')}年
 土增稅：一般 ${g('ev_tax_general')}萬、自用 ${g('ev_tax_self')}萬＜共${g('ev_tax_count')}筆＞
-銀行：${g('ev_bank')}萬
-私人：${g('ev_private')}萬／${g('ev_rate')}分
+銀行：${g('ev_bank')?g('ev_bank')+'萬':'—'}
+法人：${g('ev_legal')?g('ev_legal')+'萬':'—'}
+私人：${g('ev_private')?g('ev_private')+'萬／'+g('ev_rate')+'分':'—'}
 屋況：${g('ev_condition')}
 抗性：${g('ev_resistance')}
 凶宅查詢：${g('ev_jinzhai')}
@@ -1308,7 +1485,19 @@ function addLog(){
 }
 function removeLog(i){tempLogs.splice(i,1);renderLogs();}
 
-// ── FinProof ──────────────────────────────────────────────
+// ── Extra Loans ───────────────────────────────────────────
+let extraLoans=[];
+function renderExtraLoans(){
+  const container=document.getElementById('extraLoanList');if(!container)return;
+  container.innerHTML=extraLoans.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px">
+    <input placeholder="名稱（例：信貸）" value="${l.name||''}" onchange="extraLoans[${i}].name=this.value" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-size:13px;font-family:inherit;outline:none"/>
+    <input type="number" placeholder="金額（萬）" value="${l.amount||''}" onchange="extraLoans[${i}].amount=this.value" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-size:13px;font-family:inherit;outline:none"/>
+    <button onclick="extraLoans.splice(${i},1);renderExtraLoans()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
+  </div>`).join('');
+}
+function addExtraLoan(){extraLoans.push({name:'',amount:''});renderExtraLoans();}
+
+
 let finProofs=[];
 function renderFinProofs(){
   const container=document.getElementById('finProofList');if(!container)return;
@@ -1334,7 +1523,7 @@ async function saveClient(){
     idno:document.getElementById('fIdno').value.trim(),
     heat:document.getElementById('fHeat').value,
     remind:document.getElementById('fRemind').value,
-    remindTime:document.getElementById('fRemindTime').value,
+    remindTime:(()=>{const h=document.getElementById('fRemindHour').value;const m=document.getElementById('fRemindMin').value;return h&&m?`${h}:${m}`:''})(),
     remindNote:document.getElementById('fRemindNote').value.trim(),
     job:document.getElementById('fJob').value.trim(),
     jobYears:document.getElementById('fJobYears').value.trim(),
@@ -1342,11 +1531,18 @@ async function saveClient(){
     note:document.getElementById('fNote').value.trim(),
     addr:document.getElementById('fAddr').value.trim(),
     area:parseFloat(document.getElementById('fArea').value)||0,
+    mainArea:parseFloat(document.getElementById('fMainArea').value)||0,
+    subArea:parseFloat(document.getElementById('fSubArea').value)||0,
+    commonArea:parseFloat(document.getElementById('fCommonArea').value)||0,
+    parkArea:parseFloat(document.getElementById('fParkArea').value)||0,
     bank:parseFloat(document.getElementById('fBank').value)||0,
     legal:parseFloat(document.getElementById('fLegal').value)||0,
     private:parseFloat(document.getElementById('fPrivate').value)||0,
+    extraLoans:[...extraLoans],
     purpose:document.getElementById('fPurpose').value.trim(),
     buildNo:document.getElementById('fBuildNo').value.trim(),
+    landNo:document.getElementById('fLandNo').value.trim(),
+    driveUrl:document.getElementById('fDriveUrl').value.trim(),
     logs:[...tempLogs],
     updatedAt:TODAY,
   };
@@ -1472,7 +1668,19 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// ── Init time dropdowns ───────────────────────────────────
+function initTimeDropdowns(){
+  const hourSel = document.getElementById('fRemindHour');
+  const minSel  = document.getElementById('fRemindMin');
+  if(!hourSel || !minSel) return;
+  hourSel.innerHTML = '<option value="">--</option>' +
+    Array.from({length:24},(_,i)=>{const v=String(i).padStart(2,'0');return `<option value="${v}">${v}</option>`;}).join('');
+  minSel.innerHTML = '<option value="">--</option>' +
+    ['00','05','10','15','20','25','30','35','40','45','50','55'].map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
 loadLocal();
+initTimeDropdowns();
 initCityFilter();
 render();
 </script>
