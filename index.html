@@ -982,12 +982,18 @@ function processCompanyData(raw) {
       if(buildNo && !existing.buildNo) existing.buildNo = buildNo;
       if(landNos && !existing.landNo) existing.landNo = landNos;
       if(sectionName && !existing.purpose) existing.purpose = sectionName;
-      // 合併聯絡記錄（避免重複）
+      // 熱度：只有在客戶是「最新資料」預設狀態時才跟總檔更新，避免覆蓋手動設定
+      if(!existing.heat || existing.heat === '最新資料') existing.heat = heat;
+      // 聯絡記錄：只加入新的，不恢復已刪除的
       if(processText){
         const newLogs = parseVisitLogs(processText);
-        const existingTexts = new Set((existing.logs||[]).map(l=>l.text));
-        const toAdd = newLogs.filter(l=>!existingTexts.has(l.text));
-        if(toAdd.length) existing.logs = [...(existing.logs||[]), ...toAdd].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const existingKeys = new Set((existing.logs||[]).map(l=>(l.date||'')+(l.text||'').slice(0,20)));
+        const deletedKeys = new Set(existing.deletedLogKeys||[]);
+        const toAdd = newLogs.filter(l=>{
+          const key = (l.date||'')+(l.text||'').slice(0,20);
+          return !existingKeys.has(key) && !deletedKeys.has(key);
+        });
+        if(toAdd.length) existing.logs = [...toAdd, ...(existing.logs||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
       }
       if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
       // driveUrl 不覆蓋，保留已建立的連結
@@ -1536,7 +1542,19 @@ function addLog(){
   document.getElementById('fLogText').value='';
   renderLogs();
 }
-function removeLog(i){tempLogs.splice(i,1);renderLogs();}
+function removeLog(i){
+  const log = tempLogs[i];
+  if(log && editId){
+    // 記錄刪除的 key，避免下次匯入又帶回來
+    const c = clients.find(x=>x.id===editId);
+    if(c){
+      if(!c.deletedLogKeys) c.deletedLogKeys=[];
+      const key = (log.date||'')+(log.text||'').slice(0,20);
+      if(!c.deletedLogKeys.includes(key)) c.deletedLogKeys.push(key);
+    }
+  }
+  tempLogs.splice(i,1);renderLogs();
+}
 
 // ── Extra Loans ───────────────────────────────────────────
 let extraLoans=[];
