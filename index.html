@@ -481,6 +481,56 @@ const fromRow = (row, i) => {
 };
 
 // ── Sync ──────────────────────────────────────────────────
+function parseVisitLogs(text){
+  if(!text) return [];
+  const curYear = new Date().getFullYear();
+  const logs = [];
+
+  // 用日期pattern切割
+  const datePattern = /(?=(?:\d{3}\/\d{1,2}\/\d{1,2}|\d{7}|\d{6}|\d{4}(?!\d)))/g;
+  const parts = text.split(datePattern).map(s=>s.trim()).filter(Boolean);
+
+  parts.forEach(part => {
+    if(!part) return;
+    let date='', time='', content=part;
+
+    // 7位民國 YYYMMDD + 可選時間4位
+    let m = part.match(/^(\d{3})(\d{2})(\d{2})\s*(\d{4})?\s*/);
+    if(m && parseInt(m[1]) > 90){
+      date = `${parseInt(m[1])+1911}-${m[2]}-${m[3]}`;
+      if(m[4]) time = `${m[4].slice(0,2)}:${m[4].slice(2)}`;
+      content = part.slice(m[0].length).trim();
+    }
+    // 民國斜線 YYY/M/D
+    else if((m = part.match(/^(\d{2,3})\/(\d{1,2})\/(\d{1,2})\s*/))){
+      date = `${parseInt(m[1])+1911}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+      content = part.slice(m[0].length).trim();
+    }
+    // 6位 YYMMDD
+    else if((m = part.match(/^(\d{2})(\d{2})(\d{2})\s*(\d{4})?\s*/))){
+      const yr = parseInt(m[1]);
+      date = `${yr < 30 ? 2000+yr : 1900+yr+11}-${m[2]}-${m[3]}`;
+      if(m[4]) time = `${m[4].slice(0,2)}:${m[4].slice(2)}`;
+      content = part.slice(m[0].length).trim();
+    }
+    // 4位月日 + 4位時間 MMDD HHMM
+    else if((m = part.match(/^(\d{2})(\d{2})\s+(\d{2})(\d{2})\s+/))){
+      date = `${curYear}-${m[1]}-${m[2]}`;
+      time = `${m[3]}:${m[4]}`;
+      content = part.slice(m[0].length).trim();
+    }
+    // 4位月日 MMDD
+    else if((m = part.match(/^(\d{2})(\d{2})(?!\d)\s*/))){
+      date = `${curYear}-${m[1]}-${m[2]}`;
+      content = part.slice(m[0].length).trim();
+    }
+
+    if(content) logs.push({ date: date||TODAY, time, text: content });
+  });
+
+  return logs.reverse();
+}
+
 async function syncData() {
   const btn=document.getElementById('syncBtn');
   btn.textContent='⏳'; btn.disabled=true;
@@ -645,15 +695,19 @@ function processCompanyData(raw) {
       // 新鑫第1欄是身分證字號
       const xinIdno = String(row[1]||'').trim().match(/([A-Z]\d{9})/)?.[1] || '';
       const fullNote = [xinXinBatchDate ? `批次：${xinXinBatchDate}` : '', note].filter(Boolean).join('｜');
+      const normPhone = phone.replace(/[-\s]/g,'');
 
-      // 如果地址是空白，合併到上一筆客戶
+      // 如果地址是空白，合併到上一筆同電話或同名的新鑫客戶
       if(!addr && clients.length > 0) {
         const prev = clients[clients.length - 1];
-        if(prev.heat === '新鑫') {
+        const prevPhone = String(prev.phone||'').replace(/[-\s]/g,'');
+        const samePhone = normPhone && prevPhone && prevPhone === normPhone;
+        const sameName = name && prev.name && (prev.name===name || prev.name.includes(name));
+        if(prev.heat === '新鑫' && (samePhone || sameName || !phone)) {
           if(name && !prev.name.includes(name)) {
             prev.name = prev.name + '／' + name;
           }
-          if(phone && !prev.debtPhones.includes(phone)) {
+          if(phone && !(prev.debtPhones||[]).some(p=>p.includes(phone))) {
             prev.debtPhones = [...(prev.debtPhones||[]), phone + `（${name}）`];
           }
           prev.updatedAt = TODAY;
@@ -662,7 +716,6 @@ function processCompanyData(raw) {
         }
       }
 
-      const normPhone = phone.replace(/[-\s]/g,'');
       const existing = clients.find(c=>{
         if(c.phone && normPhone && String(c.phone).replace(/[-\s]/g,'')=== normPhone) return true;
         if(name && c.name===name) return true;
@@ -929,20 +982,20 @@ function processCompanyData(raw) {
       if(buildNo && !existing.buildNo) existing.buildNo = buildNo;
       if(landNos && !existing.landNo) existing.landNo = landNos;
       if(sectionName && !existing.purpose) existing.purpose = sectionName;
+      // 合併聯絡記錄（避免重複）
+      if(processText){
+        const newLogs = parseVisitLogs(processText);
+        const existingTexts = new Set((existing.logs||[]).map(l=>l.text));
+        const toAdd = newLogs.filter(l=>!existingTexts.has(l.text));
+        if(toAdd.length) existing.logs = [...(existing.logs||[]), ...toAdd].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+      }
       if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
       // driveUrl 不覆蓋，保留已建立的連結
       existing.heat = heat;
       existing.updatedAt = TODAY;
       updated++;
     } else {
-      const logs = [];
-      if(processText) {
-        const entries = processText.split(/(?=\d{6,7}\s)/);
-        entries.forEach(entry => {
-          const entry2 = entry.trim();
-          if(entry2) logs.push({ date: TODAY, text: entry2.slice(0,120) });
-        });
-      }
+      const logs = parseVisitLogs(processText);
 
       clients.push({
         id: nextId++,
