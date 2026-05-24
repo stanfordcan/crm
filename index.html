@@ -157,6 +157,37 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .imcancel{flex:1;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--t2)}
 .imgo{flex:2;background:var(--green);color:#fff;border:none;border-radius:var(--rs);padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .imgo:disabled{opacity:.5}
+/* ── Memo ────────────────────────────────────────────────── */
+.memo-wrap{width:100%}
+.memo-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.memo-hd-title{font-size:14px;font-weight:700;color:var(--text)}
+.memo-input-row{display:flex;gap:7px;margin-bottom:8px}
+.memo-input-row input[type="text"],.memo-input-row input:not([type]){flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none}
+.memo-input-row input:focus{border-color:var(--accent);background:var(--surface)}
+.memo-dt-row{display:flex;gap:7px;margin-bottom:12px}
+.memo-dt-row input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none}
+.memo-dt-row input:focus{border-color:var(--accent);background:var(--surface)}
+.memo-addbtn{background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:9px 14px;font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0}
+.memo-list{display:flex;flex-direction:column;gap:6px}
+.memo-item{display:flex;align-items:flex-start;gap:9px;background:var(--surface);border-radius:var(--rs);padding:10px 12px;box-shadow:var(--sh);border-left:3px solid transparent}
+.memo-item.overdue{border-left-color:var(--red)}
+.memo-item.due-today{border-left-color:var(--accent)}
+.memo-item.done{opacity:.5}
+.memo-chk{background:none;border:none;font-size:15px;cursor:pointer;padding:0;line-height:1;flex-shrink:0;margin-top:1px}
+.memo-body{flex:1;min-width:0}
+.memo-text{font-size:13px;color:var(--text);line-height:1.45;word-break:break-all}
+.memo-item.done .memo-text{text-decoration:line-through;color:var(--t3)}
+.memo-due{font-size:11px;font-weight:600;margin-top:3px}
+.memo-del{background:none;border:none;color:var(--t3);font-size:13px;cursor:pointer;padding:0;flex-shrink:0;line-height:1}
+.memo-del:hover{color:var(--red)}
+.memo-empty{text-align:center;padding:20px 0;color:var(--t3);font-size:13px}
+.memo-divider{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin:10px 0 6px}
+.pc-stat-divider{border:none;border-top:1px solid var(--border);margin:22px 0 20px}
+/* 手機專用備忘錄按鈕（PC隱藏） */
+.memo-mobile-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:2px 6px;color:var(--t2);line-height:1;border-radius:8px}
+.memo-mobile-btn:hover{background:var(--s2)}
+@media(min-width:900px){.memo-mobile-btn{display:none}}
+
 /* ── Dark Mode ────────────────────────────────────────────── */
 @media(prefers-color-scheme:dark){
   :root{
@@ -206,7 +237,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
   .pc-container .sbg:not(.open) .sheet{display:none}
   #pcEmptyState{display:none}
   @media(min-width:900px){
-    .pc-container .sbg:not(.open) #pcEmptyState{display:flex;width:100%;align-items:center;justify-content:center;padding:40px}
+    .pc-container .sbg:not(.open) #pcEmptyState{display:flex;flex-direction:column;width:100%;overflow-y:auto;padding:28px 32px;align-items:stretch}
     .pc-container .sbg.open #pcEmptyState{display:none}
   }
   .pc-container .sheet{
@@ -284,6 +315,7 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
   <div class="header">
     <div class="header-top">
       <h1>📋 客戶追蹤系統</h1>
+      <button class="memo-mobile-btn" onclick="openMemoModal()" title="備忘錄">📝</button>
     </div>
     <div class="hbtns">
       <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
@@ -331,27 +363,42 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 <!-- Client Sheet -->
 <div class="sbg" id="sheetBg">
 <div id="pcEmptyState">
-  <div style="text-align:center">
-    <div style="font-size:52px;margin-bottom:16px">📋</div>
-    <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px">借款客戶追蹤系統</div>
-    <div style="font-size:13px;color:var(--t3);margin-bottom:28px">點選左側客戶卡片查看詳情</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;margin:0 auto">
-      <div style="background:var(--rbg);border-radius:14px;padding:20px;text-align:center">
-        <div style="font-size:36px;font-weight:700;color:var(--red)" id="pc_over_num">0</div>
-        <div style="font-size:12px;color:var(--t2);margin-top:4px">⚠️ 逾期</div>
-      </div>
-      <div style="background:var(--gbg);border-radius:14px;padding:20px;text-align:center">
-        <div style="font-size:36px;font-weight:700;color:var(--green)" id="pc_today_num">0</div>
-        <div style="font-size:12px;color:var(--t2);margin-top:4px">📞 今日</div>
-      </div>
-      <div style="background:var(--s2);border-radius:14px;padding:20px;text-align:center">
-        <div style="font-size:36px;font-weight:700;color:var(--orange)" id="pc_hot_num">0</div>
-        <div style="font-size:12px;color:var(--t2);margin-top:4px">📋 待分類</div>
-      </div>
-      <div style="background:var(--s2);border-radius:14px;padding:20px;text-align:center">
-        <div style="font-size:36px;font-weight:700;color:var(--text)" id="pc_total_num">0</div>
-        <div style="font-size:12px;color:var(--t2);margin-top:4px">👥 總計</div>
-      </div>
+  <!-- 備忘錄 -->
+  <div class="memo-wrap" style="width:100%;max-width:440px;margin:0 auto">
+    <div class="memo-hd">
+      <span class="memo-hd-title">📝 備忘錄</span>
+      <span style="font-size:11px;color:var(--t3)" id="memoCountLabel"></span>
+    </div>
+    <div class="memo-input-row">
+      <input type="text" id="memoTextPC" placeholder="新增備忘事項…" onkeydown="if(event.key==='Enter')addMemo('pc')"/>
+      <button class="memo-addbtn" onclick="addMemo('pc')">＋</button>
+    </div>
+    <div class="memo-dt-row">
+      <input type="date" id="memoDuePC" title="提醒日期"/>
+      <input type="time" id="memoTimePC" title="提醒時間"/>
+    </div>
+    <div class="memo-list" id="memoListPC"></div>
+  </div>
+
+  <hr class="pc-stat-divider">
+
+  <!-- 統計 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;margin:0 auto">
+    <div style="background:var(--rbg);border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:34px;font-weight:700;color:var(--red)" id="pc_over_num">0</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:4px">⚠️ 逾期</div>
+    </div>
+    <div style="background:var(--gbg);border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:34px;font-weight:700;color:var(--green)" id="pc_today_num">0</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:4px">📞 今日</div>
+    </div>
+    <div style="background:var(--s2);border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:34px;font-weight:700;color:var(--orange)" id="pc_hot_num">0</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:4px">📋 待分類</div>
+    </div>
+    <div style="background:var(--s2);border-radius:14px;padding:18px;text-align:center">
+      <div style="font-size:34px;font-weight:700;color:var(--text)" id="pc_total_num">0</div>
+      <div style="font-size:11px;color:var(--t2);margin-top:4px">👥 總計</div>
     </div>
   </div>
 </div>
@@ -480,6 +527,25 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 </div>
 </div><!-- /pc-container -->
 
+<!-- Memo Modal (mobile) -->
+<div class="imbg" id="memoBg">
+  <div class="immodal" style="max-width:480px;max-height:80vh;display:flex;flex-direction:column">
+    <h3 style="margin-bottom:14px">📝 備忘錄</h3>
+    <div class="memo-input-row">
+      <input type="text" id="memoTextMobile" placeholder="新增備忘事項…" onkeydown="if(event.key==='Enter')addMemo('mobile')"/>
+      <button class="memo-addbtn" onclick="addMemo('mobile')">＋</button>
+    </div>
+    <div class="memo-dt-row">
+      <input type="date" id="memoDueMobile" title="提醒日期"/>
+      <input type="time" id="memoTimeMobile" title="提醒時間"/>
+    </div>
+    <div class="memo-list" id="memoListMobile" style="flex:1;overflow-y:auto;min-height:80px;max-height:50vh"></div>
+    <div class="imbtns" style="margin-top:14px">
+      <button class="imcancel" onclick="closeMemoModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- Blacklist Modal -->
 <div class="imbg" id="blBg">
   <div class="immodal" style="max-width:480px">
@@ -588,6 +654,125 @@ function loadLocal() {
       nextId = d.nextId||1;
     }
   } catch(e){}
+}
+
+// ── Memo ─────────────────────────────────────────────────
+const MEMO_KEY = 'loan_crm_memos';
+let memos = [];
+let nextMemoId = 1;
+
+function saveMemos(){
+  try{ localStorage.setItem(MEMO_KEY, JSON.stringify({memos, nextMemoId})); }catch(e){}
+}
+function loadMemos(){
+  try{
+    const d = JSON.parse(localStorage.getItem(MEMO_KEY)||'null');
+    if(d){ memos = d.memos||[]; nextMemoId = d.nextMemoId||1; }
+  }catch(e){}
+  renderMemos();
+}
+function addMemo(src){
+  const textEl = document.getElementById(src==='mobile'?'memoTextMobile':'memoTextPC');
+  const dateEl = document.getElementById(src==='mobile'?'memoDueMobile':'memoDuePC');
+  const timeEl = document.getElementById(src==='mobile'?'memoTimeMobile':'memoTimePC');
+  const text = (textEl?.value||'').trim();
+  if(!text) return;
+  memos.unshift({
+    id: nextMemoId++,
+    text,
+    dueDate: dateEl?.value||'',
+    dueTime: timeEl?.value||'',
+    done: false,
+    createdAt: TODAY
+  });
+  if(textEl) textEl.value='';
+  if(dateEl) dateEl.value='';
+  if(timeEl) timeEl.value='';
+  saveMemos();
+  renderMemos();
+  showToast('📝 已新增備忘');
+}
+function toggleMemoDone(id){
+  const m = memos.find(x=>x.id===id);
+  if(!m) return;
+  m.done = !m.done;
+  m.doneAt = m.done ? TODAY : '';
+  saveMemos();
+  renderMemos();
+}
+function deleteMemo(id){
+  memos = memos.filter(x=>x.id!==id);
+  saveMemos();
+  renderMemos();
+}
+function memoItemHtml(m){
+  const isOver = m.dueDate && m.dueDate < TODAY && !m.done;
+  const isToday = m.dueDate && m.dueDate === TODAY && !m.done;
+  let dueHtml = '';
+  if(m.dueDate){
+    const cls = isOver?'color:var(--red)':isToday?'color:var(--accent)':'color:var(--t3)';
+    const label = isOver?`⚠️ 逾期 ${m.dueDate}`:isToday?`📅 今天`:m.dueDate===''?'':m.dueDate;
+    const t = m.dueTime?` ${m.dueTime}`:'';
+    dueHtml = `<div class="memo-due" style="${cls}">${label}${t}</div>`;
+  }
+  return `<div class="memo-item${m.done?' done':''}${isOver?' overdue':''}${isToday?' due-today':''}">
+    <button class="memo-chk" onclick="toggleMemoDone(${m.id})">${m.done?'✅':'☐'}</button>
+    <div class="memo-body">
+      <div class="memo-text">${(m.text||'').replace(/</g,'&lt;')}</div>
+      ${dueHtml}
+    </div>
+    <button class="memo-del" onclick="deleteMemo(${m.id})">✕</button>
+  </div>`;
+}
+function renderMemos(){
+  const active = memos.filter(m=>!m.done);
+  const done   = memos.filter(m=>m.done).slice(0,5);
+  let html = '';
+  if(!memos.length){
+    html = '<div class="memo-empty">沒有備忘事項 ✨</div>';
+  } else {
+    html += active.map(memoItemHtml).join('');
+    if(done.length){
+      html += `<div class="memo-divider">已完成</div>`;
+      html += done.map(memoItemHtml).join('');
+    }
+  }
+  const pc = document.getElementById('memoListPC');
+  const mb = document.getElementById('memoListMobile');
+  if(pc) pc.innerHTML = html;
+  if(mb) mb.innerHTML = html;
+  const lbl = document.getElementById('memoCountLabel');
+  if(lbl) lbl.textContent = active.length ? `${active.length} 項待辦` : '';
+  // 清理超過14天的已完成備忘
+  const cutoff14 = new Date(); cutoff14.setDate(cutoff14.getDate()-14);
+  const C14 = cutoff14.toISOString().slice(0,10);
+  const before = memos.length;
+  memos = memos.filter(m=>!m.done||!m.doneAt||m.doneAt>=C14);
+  if(memos.length !== before) saveMemos();
+}
+function checkMemoReminders(){
+  const now = new Date();
+  memos.forEach(m=>{
+    if(m.done||!m.dueDate||!m.dueTime) return;
+    if(m.dueDate !== TODAY) return;
+    const [h,min] = m.dueTime.split(':').map(Number);
+    const due = new Date(); due.setHours(h,min,0,0);
+    const diff = Math.abs(now - due);
+    if(diff < 60000 && !m._notified){
+      m._notified = true;
+      showToast(`🔔 備忘提醒：${m.text}`);
+      if(Notification.permission==='granted'){
+        new Notification('📝 備忘提醒', {body: m.text, icon: '📋'});
+      }
+    }
+  });
+}
+function openMemoModal(){
+  renderMemos();
+  document.getElementById('memoBg').classList.add('open');
+}
+function closeMemoModal(){
+  document.getElementById('memoBg').classList.remove('open');
 }
 
 // ── Auto-classify ────────────────────────────────────────
@@ -1516,7 +1701,7 @@ function checkReminders() {
     if(c.remind!==nowDate) c._notified=false;
   });
 }
-setInterval(checkReminders, 60000);
+setInterval(()=>{ checkReminders(); checkMemoReminders(); }, 60000);
 initNotifications();
 
 // ── 鍵盤快捷鍵 ───────────────────────────────────────────
@@ -2210,6 +2395,7 @@ initCityFilter();
 loadLocal();
 autoClassify();
 loadBlacklist();
+loadMemos();
 initTimeDropdowns();
 render();
 // 自動同步（背景執行，不影響畫面）
