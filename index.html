@@ -20,26 +20,35 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
-.header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px 10px;position:sticky;top:0;z-index:50}
-.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.header h1{font-size:17px;font-weight:600}
-.hbtns{display:flex;gap:6px}
-.hbtn{border:none;border-radius:99px;padding:6px 11px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
+.sticky-top{position:sticky;top:0;z-index:50;background:var(--surface)}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 16px 12px}
+.header-top{display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.header h1{font-size:20px;font-weight:700;letter-spacing:1px;text-align:center}
+.hbtns{display:flex;gap:7px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;margin-bottom:10px;padding:0 2px 2px;justify-content:center}
+.hbtns::-webkit-scrollbar{display:none}
+.hbtn{border:none;border-radius:9px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.07);transition:filter .15s,transform .1s}
+.hbtn:hover{filter:brightness(.95)}
+.hbtn:active{transform:scale(.95);opacity:.85}
 .hbtn-sync{background:var(--s2);color:var(--t2)}
 .hbtn-company{background:var(--gbg);color:var(--green)}
 .hbtn-xls{background:var(--abg);color:var(--accent)}
 .hbtn:active{opacity:.8}
 .hbtn:disabled{opacity:.5}
-.stats-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.stats-bar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:4px 2px 6px;justify-content:center}
 .stats-bar::-webkit-scrollbar{display:none}
-.spill{flex-shrink:0;background:var(--s2);border-radius:99px;padding:4px 10px;font-size:11px;color:var(--t2)}
-.spill b{font-weight:600;color:var(--text)}
+.spill{flex-shrink:0;background:var(--s2);border-radius:12px;padding:8px 16px;text-align:center;min-width:62px;transition:transform .1s}
+.spill b{display:block;font-size:22px;font-weight:700;color:var(--text);line-height:1.15;letter-spacing:-.5px}
+.spill span{display:block;font-size:10px;color:var(--t3);margin-top:2px;font-weight:500;letter-spacing:.3px}
+.spill.alert{background:var(--rbg)}
 .spill.alert b{color:var(--red)}
+.spill.warn{background:var(--obg)}
+.spill.warn b{color:var(--orange)}
+.spill.info b{color:var(--accent)}
 .tabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 4px;display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;flex:1}
 .tabs::-webkit-scrollbar{display:none}
 .tabs-wrap{position:relative;display:flex;align-items:center;background:var(--surface);border-bottom:1px solid var(--border)}
-.tab-arrow{background:var(--surface);border:none;border-bottom:1px solid var(--border);padding:0 8px;font-size:20px;cursor:pointer;color:var(--t2);height:100%;flex-shrink:0;line-height:1}
-.tab-arrow:hover{color:var(--accent);background:var(--s2)}
+.tab-arrow{background:none;border:none;padding:0 6px;font-size:18px;cursor:pointer;color:var(--t3);flex-shrink:0;line-height:1}
+.tab-arrow:hover{color:var(--accent)}
 .tabs::-webkit-scrollbar{display:none}
 .tbtn{flex-shrink:0;padding:9px 12px;font-size:12px;font-weight:500;color:var(--t3);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap}
 .tbtn.active{color:var(--accent);border-bottom-color:var(--accent)}
@@ -52,16 +61,24 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .ccard.over{border-left-color:var(--red)}
 .ccard.today{border-left-color:var(--green)}
 .ccard.soon{border-left-color:#0369A1}
+/* Pinned card */
+.ccard.pinned{box-shadow:0 2px 14px rgba(245,158,11,.18);outline:1px solid rgba(245,158,11,.35)}
+/* Heat-based left border (only when no remind-state border) */
+.ccard.heat-hw:not(.over):not(.today):not(.soon){border-left-color:rgba(196,106,0,.55)}
+.ccard.heat-hc:not(.over):not(.today):not(.soon){border-left-color:rgba(43,91,226,.45)}
+.ccard.heat-hx:not(.over):not(.today):not(.soon){border-left-color:rgba(124,58,237,.45)}
+.ccard.heat-hd:not(.over):not(.today):not(.soon){border-left-color:rgba(29,140,94,.45)}
+.ccard.heat-hp:not(.over):not(.today):not(.soon){border-left-color:rgba(156,130,100,.45)}
 .ctop{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px}
 .cname{font-size:15px;font-weight:600}
 .cphone{font-size:12px;color:var(--t2);margin-top:2px}
-.hbadge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;flex-shrink:0;margin-left:6px}
-.hh{background:var(--rbg);color:var(--red)}
+.hbadge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;flex-shrink:0;margin-left:6px;letter-spacing:.2px}
 .hw{background:var(--obg);color:var(--orange)}
 .hc{background:var(--abg);color:var(--accent)}
 .hd{background:var(--gbg);color:var(--green)}
 .hf{background:var(--s2);color:var(--t3)}
 .hx{background:#F3E8FF;color:#7C3AED}
+.hp{background:#F0EDE8;color:#7C6F5E}
 .cmeta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:5px}
 .mi{font-size:11px;color:var(--t2)}
 .rchip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px}
@@ -106,6 +123,8 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .ldate{font-size:11px;color:var(--t3);margin-bottom:3px;font-weight:600}
 .ltext{font-size:13px;line-height:1.5;padding-right:26px}
 .ldel{float:right;background:none;border:none;color:var(--t3);font-size:15px;cursor:pointer;margin-top:-1px}
+/* Form section headers */
+.form-section-hd{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
 .add-log{background:var(--s2);border-radius:var(--rs);padding:13px}
 .add-log>label{font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:7px}
 .alrow{display:flex;gap:7px;margin-bottom:7px}
@@ -138,6 +157,90 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .imcancel{flex:1;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--t2)}
 .imgo{flex:2;background:var(--green);color:#fff;border:none;border-radius:var(--rs);padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .imgo:disabled{opacity:.5}
+/* ── Dark Mode ────────────────────────────────────────────── */
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1C1B18;--surface:#252420;--s2:#2E2C28;--border:#3A3830;
+    --text:#F0EDE8;--t2:#A09D96;--t3:#6B6860;
+    --abg:#1E2A4A;--rbg:#3A1A1A;--gbg:#1A3028;--obg:#3A2800;
+    --sh:0 2px 12px rgba(0,0,0,.3)
+  }
+  .pw-screen{background:#1C1B18}
+  .pw-box{background:#252420}
+  .pw-input{background:#2E2C28;color:#F0EDE8}
+}
+/* ── PC Layout (≥900px) ───────────────────────────────── */
+@media(min-width:900px){
+  html,body{height:100%;overflow:hidden}
+  .pc-container{display:flex;height:100vh;overflow:hidden}
+
+  /* 左側面板：比例寬度，跟著螢幕縮放 */
+  .pc-container .app{
+    width:45%;min-width:440px;max-width:600px;
+    flex-shrink:0;height:100vh;overflow-y:auto;
+    border-right:2px solid var(--border);
+    margin:0;min-height:unset;
+    background:var(--bg);
+  }
+
+  /* PC 按鈕列 */
+  .pc-container .hbtn{font-size:12px;padding:7px 12px}
+
+  /* 統計列可換行 */
+  .pc-container .stats-bar{flex-wrap:wrap;gap:5px;padding:4px 0}
+  .pc-container .spill{font-size:12px;padding:5px 12px}
+
+  /* 卡片間距與內距加大 */
+  .pc-container .list-wrap{padding:14px 18px 30px;gap:10px}
+  .pc-container .ccard{padding:16px 18px;border-radius:12px}
+  .pc-container .cname{font-size:16px}
+
+  /* 右側面板：編輯表單 */
+  .pc-container .sbg{
+    position:static!important;flex:1;
+    background:transparent!important;
+    display:flex!important;
+    align-items:stretch;height:100vh;
+    overflow:hidden;z-index:1;
+  }
+  .pc-container .sbg:not(.open) .sheet{display:none}
+  #pcEmptyState{display:none}
+  @media(min-width:900px){
+    .pc-container .sbg:not(.open) #pcEmptyState{display:flex;width:100%;align-items:center;justify-content:center;padding:40px}
+    .pc-container .sbg.open #pcEmptyState{display:none}
+  }
+  .pc-container .sheet{
+    border-radius:0!important;
+    height:100%!important;max-height:100%!important;
+    width:100%!important;
+    box-shadow:none;
+  }
+  .pc-container .shandle{display:none}
+
+  /* FAB 固定在左側欄右下角 */
+  .fab{left:calc(min(45vw,600px) - 72px);right:auto}
+
+  /* PC 表單兩欄排版 */
+  .pc-container #sp0,
+  .pc-container #sp1 {
+    column-count:2;
+    column-gap:20px;
+  }
+  .pc-container #sp0>*,
+  .pc-container #sp1>* {
+    break-inside:avoid;
+    -webkit-column-break-inside:avoid;
+  }
+  /* 提醒區塊、區段標題跨兩欄 */
+  .pc-container .rbox,
+  .pc-container .form-section-hd {
+    column-span:all;
+  }
+  /* PC 熱度徽章稍大 */
+  .pc-container .hbadge{font-size:13px;padding:4px 12px}
+  /* PC 卡片內身分證欄位較明顯 */
+  .pc-container .ccard .mi{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -175,16 +278,19 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
   });
 }
 </script>
+<div class="pc-container">
 <div class="app" id="mainApp" style="display:none">
+  <div class="sticky-top">
   <div class="header">
     <div class="header-top">
       <h1>📋 客戶追蹤系統</h1>
-      <div class="hbtns">
-        <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
-        <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS</button>
-        <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
-        <button class="hbtn" style="background:#FDECEC;color:#D63B3B" onclick="clearAllData()">🗑️ 清除</button>
-      </div>
+    </div>
+    <div class="hbtns">
+      <button class="hbtn hbtn-company" id="companyBtn" onclick="syncFromCompany()">🏢 從總檔更新</button>
+      <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS 匯入</button>
+      <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
+      <button class="hbtn hbtn-sync" onclick="openBlacklist()">黑名單<span id="blCount"></span></button>
+      <button class="hbtn" style="background:#FDECEC;color:#D63B3B;box-shadow:0 1px 3px rgba(214,59,59,.12)" onclick="clearAllData()">🗑️ 清除</button>
     </div>
     <div class="stats-bar" id="statsBar"></div>
   </div>
@@ -194,9 +300,10 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
     <button class="tab-arrow tab-arrow-right" onclick="scrollTabs(150)">&#8250;</button>
   </div>
   <div class="search-wrap" style="display:flex;gap:8px;flex-wrap:wrap">
-    <input class="search-input" id="searchInput" placeholder="🔍 搜尋姓名或電話…" oninput="render()" style="flex:1;min-width:120px"/>
+    <input class="search-input" id="searchInput" placeholder="🔍 搜尋姓名、電話、身分證、備註…" oninput="render()" style="flex:1;min-width:120px"/>
     <select id="sortSelect" onchange="render()" style="background:var(--s2);border:none;border-radius:var(--rs);padding:9px 10px;font-size:13px;color:var(--text);font-family:inherit;outline:none;flex-shrink:0">
       <option value="remind">📅 提醒日期</option>
+      <option value="deadline">⏰ 到期最近</option>
       <option value="heat">🔥 熱度</option>
       <option value="created">🕐 新增時間</option>
       <option value="addr">📍 地址縣市</option>
@@ -215,6 +322,7 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
       </div>
     </div>
   </div>
+  </div><!-- /sticky-top -->
   <div class="list-wrap" id="listWrap"><div class="loading">⏳ 載入中…</div></div>
 </div>
 <button class="fab" onclick="openAdd()">＋</button>
@@ -222,6 +330,31 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 
 <!-- Client Sheet -->
 <div class="sbg" id="sheetBg">
+<div id="pcEmptyState">
+  <div style="text-align:center">
+    <div style="font-size:52px;margin-bottom:16px">📋</div>
+    <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:4px">借款客戶追蹤系統</div>
+    <div style="font-size:13px;color:var(--t3);margin-bottom:28px">點選左側客戶卡片查看詳情</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;margin:0 auto">
+      <div style="background:var(--rbg);border-radius:14px;padding:20px;text-align:center">
+        <div style="font-size:36px;font-weight:700;color:var(--red)" id="pc_over_num">0</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">⚠️ 逾期</div>
+      </div>
+      <div style="background:var(--gbg);border-radius:14px;padding:20px;text-align:center">
+        <div style="font-size:36px;font-weight:700;color:var(--green)" id="pc_today_num">0</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">📞 今日</div>
+      </div>
+      <div style="background:var(--s2);border-radius:14px;padding:20px;text-align:center">
+        <div style="font-size:36px;font-weight:700;color:var(--orange)" id="pc_hot_num">0</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">📋 待分類</div>
+      </div>
+      <div style="background:var(--s2);border-radius:14px;padding:20px;text-align:center">
+        <div style="font-size:36px;font-weight:700;color:var(--text)" id="pc_total_num">0</div>
+        <div style="font-size:12px;color:var(--t2);margin-top:4px">👥 總計</div>
+      </div>
+    </div>
+  </div>
+</div>
   <div class="sheet">
     <div class="shandle"></div>
     <div class="sheader">
@@ -244,23 +377,24 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
         </div>
         <div class="frow"><label>追蹤熱度</label>
           <select id="fHeat">
+            <option value="待分類">🟤 待分類</option>
             <option value="最新資料">🔵 最新資料</option>
             <option value="覆訪">🟡 覆訪</option>
-            <option value="追很緊">🔴 追很緊</option>
             <option value="新鑫">🟣 新鑫</option>
             <option value="已簽約">🟢 已簽約</option>
             <option value="無效案件">⚫ 無效案件</option>
           </select>
         </div>
-        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;padding-top:8px;border-top:1px solid var(--border)">👤 客戶資料</div>
+        <div class="form-section-hd">👤 客戶資料</div>
         <div class="fg2">
-          <div class="frow"><label>工作／職業</label><input id="fJob" placeholder="例：上班族"/></div>
+          <div class="frow"><label>工作／職業</label><input id="fJob" placeholder="例：上班族" oninput="syncToEval('ev_job', this.value)"/></div>
           <div class="frow"><label>年資</label><input id="fJobYears" placeholder="例：5年"/></div>
         </div>
         <div class="frow"><label>財力證明</label>
           <div id="finProofList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
           <button onclick="addFinProof()" style="font-size:12px;color:var(--accent);background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;cursor:pointer;font-family:inherit;width:100%">＋ 新增財力證明</button>
         </div>
+        <div class="form-section-hd">📅 下次提醒</div>
         <div class="rbox">
           <label>🔔 下次聯絡提醒</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
@@ -283,23 +417,23 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
       </div>
       <div id="sp1" style="display:none">
         <div class="fg2" style="grid-template-columns:2fr 1fr">
-          <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder=""/></div>
-          <div class="frow"><label>地段號</label><input id="fPurpose" placeholder=""/></div>
+          <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="" oninput="syncToEval('ev_addr', this.value)"/></div>
+          <div class="frow"><label>地段號</label><input id="fPurpose" placeholder="" oninput="syncToEval('ev_section', this.value)"/></div>
         </div>
         <div class="fg2">
-          <div class="frow"><label>建號（共同擔保）</label><input id="fBuildNo" placeholder=""/></div>
-          <div class="frow"><label>地號（共同擔保）</label><input id="fLandNo" placeholder=""/></div>
+          <div class="frow"><label>建號（共同擔保）</label><input id="fBuildNo" placeholder="" oninput="syncToEval('ev_buildno', this.value)"/></div>
+          <div class="frow"><label>地號（共同擔保）</label><input id="fLandNo" placeholder="" oninput="syncToEval('ev_landno', this.value)"/></div>
         </div>
-        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;padding-top:8px;border-top:1px solid var(--border)">📐 面積</div>
+        <div class="form-section-hd">📐 面積</div>
         <div class="fg2">
-          <div class="frow"><label>總面積（坪）</label><input type="number" id="fArea" placeholder="" oninput="syncEvalArea()"/></div>
+          <div class="frow"><label>總面積（坪）</label><input type="number" id="fArea" placeholder="" oninput="syncEvalArea();syncToEval('ev_buildarea', this.value)"/></div>
           <div class="frow"><label>主建物（坪）</label><input type="number" id="fMainArea" placeholder=""/></div>
         </div>
         <div class="fg2">
           <div class="frow"><label>附屬（坪）</label><input type="number" id="fSubArea" placeholder=""/></div>
           <div class="frow"><label>公設（坪）</label><input type="number" id="fCommonArea" placeholder=""/></div>
         </div>
-        <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="" oninput="syncEvalPark()"/></div>
+        <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="" oninput="syncEvalPark();syncToEval('ev_parkarea', this.value);calcEvalBuildArea()"/></div>
         <div class="frow"><label>Google Drive 資料夾</label>
           <div style="display:flex;gap:8px">
             <input id="fDriveUrl" placeholder="尚未建立" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);font-family:inherit;outline:none" readonly/>
@@ -308,10 +442,10 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
           </div>
         </div>
         <div class="fg2">
-          <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder=""/></div>
-          <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder=""/></div>
+          <div class="frow"><label>銀行貸款（萬）</label><input type="number" id="fBank" placeholder="" oninput="syncToEval('ev_bank', this.value);refreshLoanSection()"/></div>
+          <div class="frow"><label>法人／租賃（萬）</label><input type="number" id="fLegal" placeholder="" oninput="syncToEval('ev_legal', this.value);refreshLoanSection()"/></div>
         </div>
-        <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder=""/></div>
+        <div class="frow"><label>民間借貸（萬）</label><input type="number" id="fPrivate" placeholder="" oninput="syncToEval('ev_private', this.value);refreshLoanSection()"/></div>
         <div class="frow"><label>其他貸款</label>
           <div id="extraLoanList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>
           <button onclick="addExtraLoan()" style="font-size:12px;color:var(--accent);background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;cursor:pointer;font-family:inherit;width:100%">＋ 新增貸款項目</button>
@@ -344,6 +478,19 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
     </div>
   </div>
 </div>
+</div><!-- /pc-container -->
+
+<!-- Blacklist Modal -->
+<div class="imbg" id="blBg">
+  <div class="immodal" style="max-width:480px">
+    <h3>🚫 黑名單管理</h3>
+    <p>已刪除的客戶即使從總檔或 XLS 匯入也不會再出現。如需恢復，點「移除」即可。</p>
+    <div id="blList" style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;margin-bottom:14px"></div>
+    <div class="imbtns">
+      <button class="imcancel" onclick="closeBlacklist()">關閉</button>
+    </div>
+  </div>
+</div>
 
 <!-- XLS Import Modal -->
 <div class="imbg" id="imBg">
@@ -364,12 +511,15 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 </div>
 
 <script>
-const GAS_URL     = 'https://script.google.com/macros/s/AKfycbzycbdEYGjWC0nXjYKPnogx9_D2twWDPT8NEW6anBeLUjwPc2DRqAJi3ucHqlFqSwaN/exec';
-const COMPANY_URL = 'https://script.google.com/macros/s/AKfycbwe5hci8LjmQ2gXAiZPZ0D88sZRuW0SrHQ8rwBlVyZfjpVXIA9Pvne6zqHHE7g8HGaPMQ/exec';
+const GAS_URL     = 'https://script.google.com/macros/s/AKfycbw8qfEZXC80D4DPM9qbFyUchc0_Nmwi0bD18L5N4KU63XyKQT_rijZDijxQe3gOZ3vk/exec';
+const COMPANY_URL = 'https://script.google.com/macros/s/AKfycby3bAIUQnUsCpcboXJeQZllFHlmlOOaEN7H2QCFsCMGNg9ab_c17F9dWVzFrCgxiMkcFg/exec';
+const API_TOKEN   = 'stanford87';
 const TODAY = new Date().toISOString().slice(0,10);
-const LOCAL_KEY = 'loan_crm_v2';
+const LOCAL_KEY     = 'loan_crm_v2';
+const BLACKLIST_KEY = 'loan_crm_blacklist';
 
 let clients = [];
+let blacklist = []; // [{phone,name,idno,deletedAt}]
 let nextId = 1;
 let editId = null;
 let curTab = 'all';
@@ -438,6 +588,76 @@ function loadLocal() {
       nextId = d.nextId||1;
     }
   } catch(e){}
+}
+
+// ── Auto-classify ────────────────────────────────────────
+function autoClassify() {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const CUTOFF = cutoff.toISOString().slice(0,10);
+  let changed = false;
+  clients.forEach(c => {
+    // 舊資料遷移：追很緊 → 覆訪
+    if(c.heat === '追很緊') {
+      c.heat = '覆訪';
+      changed = true;
+    }
+    // 超過7天未分類的「最新資料」→「待分類」
+    if(c.heat === '最新資料' && c.createdAt && c.createdAt <= CUTOFF) {
+      c.heat = '待分類';
+      changed = true;
+    }
+  });
+  if(changed) saveLocal();
+}
+
+// ── Blacklist ─────────────────────────────────────────────
+function saveBlacklist() {
+  try { localStorage.setItem(BLACKLIST_KEY, JSON.stringify(blacklist)); } catch(e){}
+}
+function loadBlacklist() {
+  try {
+    const d = JSON.parse(localStorage.getItem(BLACKLIST_KEY)||'null');
+    if(Array.isArray(d)) blacklist = d;
+  } catch(e){}
+  updateBlacklistBtn();
+}
+function addToBlacklist(c) {
+  const phone = (c.phone||'').replace(/[-\s]/g,'');
+  const idno  = (c.idno||'').toUpperCase();
+  // avoid duplicate entries
+  const already = blacklist.some(b => {
+    const bp = (b.phone||'').replace(/[-\s]/g,'');
+    if(phone && phone.length>5 && bp && phone===bp) return true;
+    if(idno  && idno.length>5  && b.idno && idno===b.idno.toUpperCase()) return true;
+    return false;
+  });
+  if(!already) {
+    blacklist.push({ phone:c.phone||'', name:c.name||'', idno:c.idno||'', deletedAt:TODAY });
+    saveBlacklist();
+    updateBlacklistBtn();
+  }
+}
+function isBlacklisted(phone, idno) {
+  const np = (phone||'').replace(/[-\s]/g,'');
+  const ni = (idno||'').toUpperCase();
+  return blacklist.some(b => {
+    const bp = (b.phone||'').replace(/[-\s]/g,'');
+    if(np && np.length>5 && bp && np===bp) return true;
+    if(ni && ni.length>5 && b.idno && ni===b.idno.toUpperCase()) return true;
+    return false;
+  });
+}
+function removeFromBlacklist(i) {
+  blacklist.splice(i, 1);
+  saveBlacklist();
+  updateBlacklistBtn();
+  openBlacklist();
+  showToast('✅ 已從黑名單移除');
+}
+function updateBlacklistBtn() {
+  const el = document.getElementById('blCount');
+  if(el) el.textContent = blacklist.length ? ` (${blacklist.length})` : '';
 }
 
 // ── Google Sheets sync ────────────────────────────────────
@@ -536,7 +756,7 @@ async function syncData() {
   const btn=document.getElementById('syncBtn');
   btn.textContent='⏳'; btn.disabled=true;
   try {
-    const res = await fetch(GAS_URL);
+    const res = await fetch(GAS_URL + '?token=' + API_TOKEN);
     const raw = await res.json();
     if(raw&&raw.length>1){
       clients=raw.slice(1).filter(r=>r[0]).map((r,i)=>fromRow(r,i));
@@ -549,7 +769,7 @@ async function syncData() {
 }
 async function pushToSheet() {
   const rows=[HDR,...clients.map(toRow)];
-  await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'save',data:rows})});
+  await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'save',token:API_TOKEN,data:rows})});
 }
 
 // ── Company Sheet (JSONP) ─────────────────────────────────
@@ -585,7 +805,7 @@ async function createDriveFolder(){
   const btn = document.getElementById('btnDrive');
   btn.textContent='⏳ 建立中…';btn.disabled=true;
   try{
-    const data = await jsonpFetch(GAS_URL+'?action=createFolder&name='+encodeURIComponent(name));
+    const data = await jsonpFetch(GAS_URL+'?action=createFolder&token='+API_TOKEN+'&name='+encodeURIComponent(name));
     if(data&&data.status==='ok'&&data.url){
       document.getElementById('fDriveUrl').value=data.url;
       document.getElementById('btnOpenDrive').style.display='';
@@ -608,7 +828,7 @@ async function syncFromCompany() {
   btn.textContent='⏳ 讀取中…'; btn.disabled=true;
   showToast('⏳ 正在連接總檔…');
   try {
-    const raw = await jsonpFetch(COMPANY_URL);
+    const raw = await jsonpFetch(COMPANY_URL + '?token=' + API_TOKEN);
     if(!raw||!Array.isArray(raw)){
       showToast('⚠️ 總檔回傳格式錯誤');
       btn.textContent='🏢 從總檔更新'; btn.disabled=false;
@@ -631,12 +851,10 @@ function processCompanyData(raw) {
   // Sheet name → heat mapping (last column of each row)
   function sheetToHeat(sheetName) {
     const s = (sheetName||'').trim();
-    if(/覆訪/.test(s)) return '覆訪';
-    if(/追進度|追很緊|保持聯繫/.test(s)) return '追很緊';
     if(/無效|斷聯|塗銷/.test(s)) return '無效案件';
     if(/簽約/.test(s)) return '已簽約';
     if(/新鑫/.test(s)) return '新鑫';
-    return '最新資料';
+    return '最新資料'; // 所有匯入資料預設為最新資料
   }
 
   // Detect if row is 新鑫 format (col1 looks like ID number, col2 looks like phone)
@@ -722,6 +940,7 @@ function processCompanyData(raw) {
         if(name && c.name===name) return true;
         return false;
       });
+      if(isBlacklisted(phone, xinIdno)){ skipped++; return; }
       if(existing){
         if(!existing.addr && addr) existing.addr = addr;
         if(fullNote && !existing.note) existing.note = fullNote;
@@ -969,6 +1188,8 @@ function processCompanyData(raw) {
     // Get sheet name from last column and determine heat
     const heat = sheetToHeat(sheetName);
 
+    if(isBlacklisted(phone, idno)){ skipped++; return; }
+
     if(existing){
       existing.companyRaw = companyRaw;
       if(!existing.addr && addr) existing.addr = addr;
@@ -1036,6 +1257,7 @@ function processCompanyData(raw) {
     return true;
   });
 
+  autoClassify();
   saveLocal();
   pushToSheet().catch(()=>{});
   render();
@@ -1069,24 +1291,57 @@ function remChip(r,rt){
   const cls=s==='over'?'rc-over':s==='today'?'rc-today':s==='soon'?'rc-soon':'rc-ok';
   return`<span class="rchip ${cls}">${label}</span>`;
 }
-const hCls={'追很緊':'hh','覆訪':'hw','最新資料':'hc','已簽約':'hd','無效案件':'hf','新鑫':'hx'};
-const hOrd={'追很緊':0,'覆訪':1,'最新資料':2,'新鑫':3,'已簽約':4,'無效案件':5};
+const hCls={'待分類':'hp','覆訪':'hw','最新資料':'hc','已簽約':'hd','無效案件':'hf','新鑫':'hx'};
+const hOrd={'待分類':0,'覆訪':1,'最新資料':2,'新鑫':3,'已簽約':4,'無效案件':5};
 const rOrd={over:0,today:1,soon:2,ok:3,null:4};
 
 function updateStats(){
-  const over=clients.filter(c=>c.remind&&c.remind<TODAY&&!['已簽約','無效案件'].includes(c.heat)).length;
-  const tod=clients.filter(c=>c.remind===TODAY).length;
+  const inactive = ['已簽約','無效案件'];
+  // 逾期：提醒日已過，非結案
+  const over = clients.filter(c=>c.remind&&c.remind<TODAY&&!inactive.includes(c.heat)).length;
+  // 未排程：沒有提醒日，非結案（最容易被遺忘的一群）
+  const noRemind = clients.filter(c=>!c.remind&&!inactive.includes(c.heat)).length;
+  // 本週：今天起7天內有提醒（含今天）
+  const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate()+7);
+  const WEEK_END = weekEnd.toISOString().slice(0,10);
+  const week = clients.filter(c=>c.remind&&c.remind>=TODAY&&c.remind<=WEEK_END).length;
+  // 總計
+  const total = clients.length;
+
   document.getElementById('statsBar').innerHTML=`
-    <div class="spill ${over?'alert':''}">逾期<b>${over}</b></div>
-    <div class="spill">今日<b>${tod}</b></div>
-    <div class="spill">追很緊<b>${clients.filter(c=>c.heat==='追很緊').length}</b></div>
-    <div class="spill">總計<b>${clients.length}</b></div>
-    <div class="spill">成功<b>${clients.filter(c=>c.heat==='已簽約').length}</b></div>
+    <div class="spill ${over?'alert':''}"><b>${over}</b><span>⚠️ 逾期</span></div>
+    <div class="spill ${noRemind?'warn':''}"><b>${noRemind}</b><span>📋 未排程</span></div>
+    <div class="spill ${week?'info':''}"><b>${week}</b><span>📅 本週</span></div>
+    <div class="spill"><b>${total}</b><span>👥 總計</span></div>
   `;
+  // 瀏覽器標題顯示逾期數
+  document.title = over > 0 ? `(${over}) 借款追蹤系統` : '借款追蹤系統';
+  // PC 空白統計
+  const s=id=>document.getElementById(id);
+  const tod=clients.filter(c=>c.remind===TODAY).length;
+  const unclass=clients.filter(c=>c.heat==='待分類').length;
+  if(s('pc_over_num'))  s('pc_over_num').textContent=over;
+  if(s('pc_today_num')) s('pc_today_num').textContent=tod;
+  if(s('pc_hot_num'))   s('pc_hot_num').textContent=unclass;
+  if(s('pc_total_num')) s('pc_total_num').textContent=total;
 }
 function updateTabs(){
-  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'追很緊',l:'追很緊'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'新鑫',l:'新鑫'},{k:'已簽約',l:'已簽約'},{k:'無效案件',l:'無效案件'}];
-  document.getElementById('tabsWrap').innerHTML=tabs.map(t=>`<button class="tbtn ${curTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}</button>`).join('');
+  const cnt={
+    all: clients.length,
+    today: clients.filter(c=>c.remind===TODAY).length,
+    over: clients.filter(c=>c.remind&&c.remind<TODAY&&!['已簽約','無效案件'].includes(c.heat)).length,
+    '待分類': clients.filter(c=>c.heat==='待分類').length,
+    '覆訪': clients.filter(c=>c.heat==='覆訪').length,
+    '最新資料': clients.filter(c=>c.heat==='最新資料').length,
+    '新鑫': clients.filter(c=>c.heat==='新鑫').length,
+    '已簽約': clients.filter(c=>c.heat==='已簽約').length,
+    '無效案件': clients.filter(c=>c.heat==='無效案件').length,
+  };
+  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'待分類',l:'待分類'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'新鑫',l:'新鑫'},{k:'已簽約',l:'已簽約'},{k:'無效案件',l:'無效案件'}];
+  document.getElementById('tabsWrap').innerHTML=tabs.map(t=>{
+    const n=cnt[t.k];
+    return`<button class="tbtn ${curTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}${n?`<span style="font-size:10px;opacity:.65;margin-left:2px">(${n})</span>`:''}</button>`;
+  }).join('');
 }
 function scrollTabs(dx) {
   const tabs = document.getElementById('tabsWrap');
@@ -1095,6 +1350,15 @@ function scrollTabs(dx) {
 
 function setTab(t){curTab=t;render();}
 
+// Highlight matching keyword in text
+function hl(text, q){
+  if(!q||!text) return text||'';
+  try{
+    const esc=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    return String(text).replace(new RegExp(`(${esc})`,'gi'),'<mark style="background:#FFF176;color:#5D4037;border-radius:2px;padding:0 1px">$1</mark>');
+  }catch(e){return text||'';}
+}
+
 function render(){
   updateStats();updateTabs();
   const q=document.getElementById('searchInput').value.toLowerCase();
@@ -1102,7 +1366,7 @@ function render(){
   if(curTab==='today') list=list.filter(c=>c.remind===TODAY);
   else if(curTab==='over') list=list.filter(c=>c.remind&&c.remind<TODAY);
   else if(curTab!=='all') list=list.filter(c=>c.heat===curTab);
-  if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').includes(q));
+  if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').toLowerCase().includes(q)||(c.idno||'').toLowerCase().includes(q)||(c.note||'').toLowerCase().includes(q));
   // 縣市篩選
   if(selectedCities.size > 0) {
     list = list.filter(c => {
@@ -1123,11 +1387,17 @@ function render(){
   }
 
   list.sort((a,b)=>{
+    // 置頂優先
+    if(!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
     if(sortBy==='heat'){
       const hd=(hOrd[a.heat]??9)-(hOrd[b.heat]??9);
       if(hd!==0) return hd;
       const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
       return ra-rb;
+    } else if(sortBy==='deadline'){
+      const da=a.remind||'9999-99-99',db=b.remind||'9999-99-99';
+      if(da!==db) return da.localeCompare(db);
+      return (hOrd[a.heat]??9)-(hOrd[b.heat]??9);
     } else if(sortBy==='created'){
       const da=a.createdAt||'',db=b.createdAt||'';
       return db.localeCompare(da);
@@ -1149,29 +1419,54 @@ function render(){
   const wrap=document.getElementById('listWrap');
   if(!list.length){wrap.innerHTML=`<div class="empty">🔍 查無資料</div>`;return;}
   wrap.innerHTML=list.map(c=>{
-    const st=remSt(c.remind);
+    let st=remSt(c.remind);
+    // 今天的提醒，但時間已過 → 視為逾期
+    if(st==='today'&&c.remindTime){
+      const now=new Date();
+      const [rh,rm]=(c.remindTime||'00:00').split(':').map(Number);
+      const rt=new Date(); rt.setHours(rh,rm,0,0);
+      if(now>rt) st='over';
+    }
     const cls=st==='over'?'over':st==='today'?'today':st==='soon'?'soon':'';
     const lastLog=c.logs&&c.logs.length?c.logs[0]:null;
     const total=(c.bank||0)+(c.private||0);
-    return`<div class="ccard ${cls}" onclick="openEdit(${c.id})">
+    const heatCls=hCls[c.heat]||'';
+    return`<div class="ccard ${cls} heat-${heatCls}${c.pinned?' pinned':''}" onclick="openEdit(${c.id})">
       <div class="ctop">
-        <div><div class="cname">${c.name}</div><div class="cphone">${c.phone}</div></div>
-        <span class="hbadge ${hCls[c.heat]||''}">${c.heat}</span>
+        <div style="flex:1;min-width:0"><div class="cname">${hl(c.name||'',q)}</div><div class="cphone" onclick="handlePhoneClick(event,'${c.phone||''}')" style="${c.phone?'cursor:pointer;text-decoration:underline dotted':''}">${hl(c.phone||'',q)}</div></div>
+        <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+          <button onclick="togglePin(${c.id},event)" title="${c.pinned?'取消置頂':'置頂'}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;line-height:1;opacity:${c.pinned?'1':'.25'};transition:opacity .15s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${c.pinned?'1':'.25'}'">📌</button>
+          <span class="hbadge ${heatCls}">${c.heat}</span>
+        </div>
       </div>
       <div class="cmeta">
         ${c.remind?remChip(c.remind,c.remindTime):''}
         ${c.bank?`<span class="mi">🏦銀行${c.bank}萬</span>`:''}
         ${c.legal?`<span class="mi">🏢法人${c.legal}萬</span>`:''}
         ${c.private?`<span class="mi" style="color:var(--red)">⚠️民間${c.private}萬</span>`:''}
+        ${c.idno?`<span class="mi">🪪${hl(c.idno||'',q)}</span>`:''}
         ${c.companyRaw?`<span class="mi" style="color:var(--green)">🏢總檔</span>`:''}
         ${c.logs&&c.logs.length?`<span class="mi">💬${c.logs.length}筆</span>`:''}
       </div>
       ${c.remindNote?`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📌${c.remindNote}</div>`:''}
-      ${c.addr?`<div style="font-size:11px;color:var(--t2);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📍${c.addr}</div>`:''}
-      ${lastLog?`<div class="clog"><span style="color:var(--t3)">${lastLog.date}：</span>${lastLog.text}</div>`:''}
-      ${(st==='over'||st==='today'||st==='soon')?`<button onclick="clearRemind(event,${c.id})" style="margin-top:8px;width:100%;background:var(--s2);color:var(--t2);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ 清除提醒</button>`:''}
+      ${c.addr?`<div style="font-size:11px;color:var(--t2);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📍${hl(c.addr||'',q)}</div>`:''}
+      ${lastLog?`<div class="clog"><span style="color:var(--t3)">${lastLog.date}：</span>${hl(lastLog.text||'',q)}</div>`:''}
+      ${c.remind?`<div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="openCalendar(${c.id});event.stopPropagation()" style="flex:1;background:var(--abg);color:var(--accent);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📅 加入行事曆</button>
+        ${(st==='over'||st==='today'||st==='soon')?`<button onclick="clearRemind(event,${c.id})" style="flex:1;background:var(--s2);color:var(--t2);border:none;border-radius:var(--rs);padding:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✕ 清除提醒</button>`:''}
+      </div>`:''}
     </div>`;
   }).join('');
+}
+
+function togglePin(id, e) {
+  e.stopPropagation();
+  const c = clients.find(x=>x.id===id);
+  if(!c) return;
+  c.pinned = !c.pinned;
+  saveLocal();
+  render();
+  showToast(c.pinned ? '📌 已置頂' : '已取消置頂');
 }
 
 async function clearRemind(e, id) {
@@ -1188,9 +1483,99 @@ async function clearRemind(e, id) {
   render();
 }
 
+// ── 電話點擊 ──────────────────────────────────────────────
+function handlePhoneClick(e, phone) {
+  e.stopPropagation();
+  if(!phone) return;
+  if(/Mobi|Android|iPhone/i.test(navigator.userAgent)) {
+    window.location.href = 'tel:' + phone.replace(/[-\s]/g,'');
+  } else {
+    navigator.clipboard.writeText(phone).then(()=>showToast('📋 已複製電話號碼'));
+  }
+}
+
+// ── 表單髒標記 ────────────────────────────────────────────
+let formDirty = false;
+document.getElementById('sheetBg').addEventListener('input', ()=>{ formDirty=true; });
+
+// ── 瀏覽器推播通知 ────────────────────────────────────────
+function initNotifications() {
+  if(!('Notification' in window)) return;
+  if(Notification.permission==='default') Notification.requestPermission();
+}
+function checkReminders() {
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const now=new Date();
+  const nowDate=now.toISOString().slice(0,10);
+  const nowTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  clients.forEach(c=>{
+    if(c.remind===nowDate && c.remindTime===nowTime && !c._notified) {
+      new Notification(`📞 聯絡 ${c.name}`,{body:c.remindNote||c.phone||'',icon:'📋'});
+      c._notified=true;
+    }
+    if(c.remind!==nowDate) c._notified=false;
+  });
+}
+setInterval(checkReminders, 60000);
+initNotifications();
+
+// ── 鍵盤快捷鍵 ───────────────────────────────────────────
+document.addEventListener('keydown', e=>{
+  const sheetOpen=document.getElementById('sheetBg').classList.contains('open');
+  // Esc 關閉
+  if(e.key==='Escape' && sheetOpen){ closeSheet(); return; }
+  // Ctrl+S 儲存
+  if(e.ctrlKey && e.key==='s' && sheetOpen){ e.preventDefault(); saveClient(); return; }
+  // ↑↓ 切換客戶（PC）
+  if((e.key==='ArrowUp'||e.key==='ArrowDown') && sheetOpen && window.innerWidth>=900){
+    e.preventDefault();
+    const cards=Array.from(document.querySelectorAll('.ccard'));
+    const ids=cards.map(el=>{const m=el.getAttribute('onclick')?.match(/openEdit\((\d+)\)/);return m?parseInt(m[1]):null;}).filter(Boolean);
+    const idx=ids.indexOf(editId);
+    const next=e.key==='ArrowUp'?idx-1:idx+1;
+    if(next>=0&&next<ids.length) openEdit(ids[next]);
+  }
+});
+
+function syncToEval(targetId, val) {
+  const el = document.getElementById(targetId);
+  if(el) el.value = val;
+}
+function refreshLoanSection() {
+  const section = document.getElementById('ev_loan_section');
+  if(!section) return;
+  const bank = parseFloat(document.getElementById('fBank')?.value) || 0;
+  const legal = parseFloat(document.getElementById('fLegal')?.value) || 0;
+  const priv = parseFloat(document.getElementById('fPrivate')?.value) || 0;
+  const hasExtra = extraLoans.some(l => l.name && l.amount);
+  const bankRow = document.getElementById('ev_bank_row');
+  const legalRow = document.getElementById('ev_legal_row');
+  const privateRow = document.getElementById('ev_private_row');
+  if(bankRow) bankRow.style.display = bank ? 'block' : 'none';
+  if(legalRow) legalRow.style.display = legal ? 'block' : 'none';
+  if(privateRow) privateRow.style.display = priv ? 'block' : 'none';
+  section.style.display = (bank || legal || priv || hasExtra) ? 'block' : 'none';
+}
+
+function openCalendar(id) {
+  const c = clients.find(x => x.id === id);
+  if(!c || !c.remind) return;
+  const date = c.remind.replace(/-/g, '');
+  const time = c.remindTime || '09:00';
+  const [h, m] = time.split(':');
+  const endMin = parseInt(m) + 30;
+  const endH = parseInt(h) + Math.floor(endMin / 60);
+  const endM = endMin % 60;
+  const start = `${date}T${h}${m}00`;
+  const end = `${date}T${String(endH).padStart(2,'0')}${String(endM).padStart(2,'0')}00`;
+  const title = encodeURIComponent(`📞 聯絡 ${c.name}${c.remindNote ? ' - ' + c.remindNote : ''}`);
+  const details = encodeURIComponent(`電話：${c.phone || ''}\n備註：${c.remindNote || ''}\n地址：${c.addr || ''}`);
+  window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`, '_blank');
+}
+
 // ── Sheet modal ───────────────────────────────────────────
 function openAdd(){
-  editId=null;
+  editId=null;formDirty=false;
   document.getElementById('sheetTitle').textContent='新增客戶';
   document.getElementById('btnDel').style.display='none';
   ['fName','fPhone','fIdno','fAddr','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears'].forEach(id=>document.getElementById(id).value='');
@@ -1209,11 +1594,12 @@ function openAdd(){
   finProofs=[];renderFinProofs();
   extraLoans=[];renderExtraLoans();
   tempLogs=[];renderLogs();sSTabTo(0);
+  setTimeout(()=>renderPriceEval({}), 100);
   document.getElementById('sheetBg').classList.add('open');
 }
 
 function openEdit(id){
-  editId=id;
+  editId=id;formDirty=false;
   const c=clients.find(x=>x.id===id);
   if(!c)return;
   document.getElementById('sheetTitle').textContent=c.name;
@@ -1309,7 +1695,11 @@ function openEdit(id){
   document.getElementById('sheetBg').classList.add('open');
 }
 
-function closeSheet(){document.getElementById('sheetBg').classList.remove('open');}
+function closeSheet(){
+  if(formDirty && !confirm('有未儲存的變更，確定要關閉嗎？')) return;
+  formDirty=false;
+  document.getElementById('sheetBg').classList.remove('open');
+}
 
 function renderPriceEval(c) {
   const panel = document.getElementById('priceEvalPanel');
@@ -1323,7 +1713,7 @@ function renderPriceEval(c) {
   const buildNo = buildNoMatch ? buildNoMatch[1] : (c.buildNo||'');
 
   const sectionMatch = buildInfo.match(/[\u4e00-\u9fff]+[市縣]\s+[\u4e00-\u9fff]+[區鄉鎮市]\s+([\u4e00-\u9fff]+段[\u4e00-\u9fff]*)\s+\d+/);
-  const section = sectionMatch ? sectionMatch[1] : '';
+  const section = sectionMatch ? sectionMatch[1] : (document.getElementById('fPurpose')?.value || c.purpose || '');
 
   const districtMatch = buildInfo.match(/[\u4e00-\u9fff]+[市縣]\s+([\u4e00-\u9fff]+[區鄉鎮市])/);
   const district = districtMatch ? districtMatch[1] : (addr.match(/[\u4e00-\u9fff]+[市縣]([\u4e00-\u9fff]+[區鄉鎮市])/)?.[1]||'');
@@ -1403,16 +1793,12 @@ function renderPriceEval(c) {
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>筆數</label><input type="number" id="ev_tax_count" placeholder="1"/></div>
       </div>
 
-      <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
+      <div id="ev_loan_section" style="background:var(--s2);border-radius:var(--rs);padding:12px 14px;display:${(c.bank||c.legal||c.private||(extraLoans||[]).some(l=>l.name&&l.amount))?'block':'none'}">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🏦 貸款狀況</div>
-        ${c.bank?`<div class="frow" style="margin-bottom:8px"><label>銀行（萬）</label><input type="number" id="ev_bank" value="${c.bank||''}"/></div>`:''}
-        ${c.legal?`<div class="frow" style="margin-bottom:8px"><label>法人／租賃（萬）</label><input type="number" id="ev_legal" value="${c.legal||''}"/></div>`:''}
-        ${c.private?`<div class="fg2" style="margin-bottom:8px">
-          <div class="frow" style="margin:0"><label>民間（萬）</label><input type="number" id="ev_private" value="${c.private||''}"/></div>
-          <div class="frow" style="margin:0"><label>利率（分）</label><input type="number" id="ev_rate" placeholder="1.5" step="0.1"/></div>
-        </div>`:''}
-        ${(c.extraLoans||[]).map((l,i)=>l.name?`<div class="frow" style="margin-bottom:6px"><label>${l.name}（萬）</label><input type="number" id="ev_extra_${i}" value="${l.amount||''}"/></div>`:'').join('')}
-        ${!c.bank&&!c.legal&&!c.private&&!(c.extraLoans||[]).length?`<div style="font-size:12px;color:var(--t3)">尚無貸款資料</div>`:''}
+        <div id="ev_bank_row" style="margin-bottom:8px;display:${c.bank?'block':'none'}"><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">銀行（萬）</label><input type="number" id="ev_bank" value="${c.bank||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div>
+        <div id="ev_legal_row" style="margin-bottom:8px;display:${c.legal?'block':'none'}"><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">法人／租賃（萬）</label><input type="number" id="ev_legal" value="${c.legal||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div>
+        <div id="ev_private_row" style="margin-bottom:8px;display:${c.private?'block':'none'}"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px"><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">民間（萬）</label><input type="number" id="ev_private" value="${c.private||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">利率（分）</label><input type="number" id="ev_rate" placeholder="1.5" step="0.1" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div></div></div>
+        ${(extraLoans||[]).map((l,i)=>l.name?`<div class="frow" style="margin-bottom:6px"><label>${l.name}（萬）</label><input type="number" id="ev_extra_${i}" value="${l.amount||''}"/></div>`:'').join('')}
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
@@ -1572,6 +1958,7 @@ function renderExtraLoans(){
     <input type="number" placeholder="金額（萬）" value="${l.amount||''}" onchange="extraLoans[${i}].amount=this.value" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-size:13px;font-family:inherit;outline:none"/>
     <button onclick="extraLoans.splice(${i},1);renderExtraLoans()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;flex-shrink:0">✕</button>
   </div>`).join('');
+  refreshLoanSection();
 }
 function addExtraLoan(){extraLoans.push({name:'',amount:''});renderExtraLoans();}
 
@@ -1631,6 +2018,7 @@ async function saveClient(){
     clients.push({id:nextId++,createdAt:TODAY,debtPhones:[],companyRaw:null,...data});
   }
   saveLocal();
+  formDirty=false;
   try{await pushToSheet();showToast('✅ 已儲存並同步');}
   catch(e){showToast('💾 已存本地');}
   btn.disabled=false;btn.textContent='儲存';
@@ -1639,11 +2027,12 @@ async function saveClient(){
 
 async function deleteClient(){
   const c=clients.find(x=>x.id===editId);
-  if(!confirm(`確定刪除「${c?.name}」？`))return;
+  if(!confirm(`確定刪除「${c?.name}」？\n\n此客戶將加入黑名單，即使之後從總檔或 XLS 匯入也不會再出現。`))return;
+  addToBlacklist(c);
   clients=clients.filter(x=>x.id!==editId);
   saveLocal();
-  try{await pushToSheet();showToast('🗑️ 已刪除');}
-  catch(e){showToast('🗑️ 已刪除（本地）');}
+  try{await pushToSheet();showToast('🗑️ 已刪除並加入黑名單');}
+  catch(e){showToast('🗑️ 已刪除並加入黑名單（本地）');}
   closeSheet();render();
 }
 
@@ -1657,6 +2046,29 @@ function openImport(){
   document.getElementById('imBg').classList.add('open');
 }
 function closeImport(){document.getElementById('imBg').classList.remove('open');}
+
+// ── Blacklist UI ──────────────────────────────────────────
+function openBlacklist() {
+  const list = document.getElementById('blList');
+  if(!blacklist.length) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px">🎉 黑名單為空</div>';
+  } else {
+    list.innerHTML = blacklist.map((b,i)=>`
+      <div style="background:var(--s2);border-radius:var(--rs);padding:10px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${b.name||'（無姓名）'}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">
+            ${b.phone||'無電話'}${b.idno?' ・ '+b.idno:''}<br>
+            刪除於 ${b.deletedAt}
+          </div>
+        </div>
+        <button onclick="removeFromBlacklist(${i})" style="flex-shrink:0;background:var(--gbg);color:var(--green);border:none;border-radius:var(--rs);padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✅ 恢復</button>
+      </div>
+    `).join('');
+  }
+  document.getElementById('blBg').classList.add('open');
+}
+function closeBlacklist(){document.getElementById('blBg').classList.remove('open');}
 
 function handleXls(file){
   if(!file)return;
@@ -1687,7 +2099,8 @@ document.getElementById('sheetBg').addEventListener('click',e=>{if(e.target===do
 document.getElementById('imBg').addEventListener('click',e=>{if(e.target===document.getElementById('imBg'))closeImport();});
 
 async function clearAllData() {
-  if(!confirm('確定要清除所有客戶資料？此動作無法復原！')) return;
+  if(!confirm(`⚠️ 第一次確認\n\n即將清除全部 ${clients.length} 筆客戶資料。\n此動作無法復原，確定要繼續嗎？`)) return;
+  if(!confirm(`🚨 第二次確認\n\n請再次確認：所有資料將被永久刪除，\n包含聯絡記錄、提醒設定等。\n\n確定清除？`)) return;
   clients = [];
   nextId = 1;
   saveLocal();
@@ -1794,7 +2207,13 @@ function initTimeDropdowns(){
 
 
 initCityFilter();
+loadLocal();
+autoClassify();
+loadBlacklist();
+initTimeDropdowns();
 render();
+// 自動同步（背景執行，不影響畫面）
+syncData().catch(()=>{});
 </script>
 </body>
 </html>
