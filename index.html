@@ -99,7 +99,8 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .sbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end}
 .sbg.open{display:flex}
 .sheet{background:var(--surface);border-radius:22px 22px 0 0;width:100%;height:60vh;min-height:30vh;max-height:95vh;display:flex;flex-direction:column;overflow:hidden;transition:none}
-.shandle{width:40px;height:5px;background:var(--border);border-radius:99px;margin:10px auto;flex-shrink:0;cursor:grab;touch-action:none}
+.shandle{width:44px;height:5px;background:var(--border);border-radius:99px;margin:10px auto 4px;flex-shrink:0;cursor:grab;touch-action:none;transition:background .15s}
+.shandle:active{background:var(--t3)}
 .sheader{padding:13px 18px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
 .stitle{font-size:16px;font-weight:600}
 .xbtn{background:var(--s2);border:none;border-radius:50%;width:28px;height:28px;font-size:15px;cursor:pointer;color:var(--t2);display:flex;align-items:center;justify-content:center;font-family:inherit}
@@ -1462,7 +1463,14 @@ function remSt(r){
 }
 function remChip(r,rt){
   if(!r)return'';
-  const s=remSt(r);
+  let s=remSt(r);
+  // 今天但時間已過 → 視為逾期
+  if(s==='today'&&rt){
+    const now=new Date();
+    const [rh,rm]=(rt||'00:00').split(':').map(Number);
+    const rdt=new Date(); rdt.setHours(rh,rm,0,0);
+    if(now>rdt) s='over';
+  }
   const ts=rt?` ${rt}`:'';
   const days=Math.ceil((new Date(r)-new Date(TODAY))/86400000);
   let label='';
@@ -2362,39 +2370,104 @@ function initTimeDropdowns(){
     ['00','05','10','15','20','25','30','35','40','45','50','55'].map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 
-// ── Drag to resize sheet ──────────────────────────────────
+// ── Drag to resize sheet (mobile) ────────────────────────
 (function(){
   const handle = document.querySelector('.shandle');
   const sheet  = document.querySelector('.sheet');
+  const sbg    = document.getElementById('sheetBg');
   if(!handle || !sheet) return;
-  let startY=0, startH=0, dragging=false;
+
+  // 三個磁吸高度（佔視窗比例）
+  const SNAPS = [0.45, 0.72, 0.95];
+
+  let startY=0, startH=0, lastY=0, vel=0, dragging=false;
+
+  function vh(){ return window.innerHeight; }
+
+  // 磁吸：找最近的 snap 點
+  function nearestSnap(h){
+    return SNAPS.map(s=>s*vh()).reduce((a,b)=>Math.abs(b-h)<Math.abs(a-h)?b:a);
+  }
+
+  // 帶動畫滑到目標高度
+  function animateTo(targetH, dur=240){
+    sheet.style.transition = `height ${dur}ms cubic-bezier(.32,1,.46,1)`;
+    sheet.style.height = targetH+'px';
+    setTimeout(()=>{ sheet.style.transition=''; }, dur+20);
+  }
 
   function onStart(e){
-    dragging=true;
-    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    if(window.innerWidth >= 900) return;   // PC 不觸發
+    if(e.target.closest('button,input,select,textarea')) return; // 不搶按鈕/表單
+    dragging = true;
+    startY = lastY = e.touches ? e.touches[0].clientY : e.clientY;
     startH = sheet.offsetHeight;
-    handle.style.cursor='grabbing';
-    document.body.style.userSelect='none';
+    vel = 0;
+    sheet.style.transition = '';           // 拖拉時取消動畫
   }
+
   function onMove(e){
     if(!dragging) return;
     const y = e.touches ? e.touches[0].clientY : e.clientY;
+    vel = y - lastY;                       // 正值 = 往下（縮小）
+    lastY = y;
     const diff = startY - y;
-    const newH = Math.min(Math.max(startH + diff, window.innerHeight*0.3), window.innerHeight*0.95);
+    const newH = Math.min(Math.max(startH + diff, vh()*0.18), vh()*0.95);
     sheet.style.height = newH+'px';
   }
+
   function onEnd(){
-    dragging=false;
-    handle.style.cursor='grab';
-    document.body.style.userSelect='';
+    if(!dragging) return;
+    dragging = false;
+    const curH = sheet.offsetHeight;
+
+    // 往下快速滑 (vel>14) 或高度低於 22% → 關閉
+    if(vel > 14 || curH < vh()*0.22){
+      sheet.style.transition = 'height .18s ease-in';
+      sheet.style.height = '0px';
+      setTimeout(()=>{
+        sheet.style.transition='';
+        sheet.style.height='';
+        closeSheet();
+      }, 190);
+      return;
+    }
+
+    // 往上快速滑 → 直接展開到最大
+    if(vel < -14){
+      animateTo(vh()*0.95);
+      return;
+    }
+
+    // 一般放開 → 磁吸到最近的 snap 點
+    animateTo(nearestSnap(curH));
   }
 
-  handle.addEventListener('mousedown', onStart);
-  handle.addEventListener('touchstart', onStart, {passive:true});
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('touchmove', onMove, {passive:true});
-  document.addEventListener('mouseup', onEnd);
+  // 加大 handle 本身的觸控區域
+  handle.style.padding = '10px 0';
+  handle.style.margin  = '2px auto 4px';
+
+  // 把 sheader 也加入拖拉範圍（整個標題列都可以抓）
+  const sheader = document.querySelector('.sheader');
+
+  [handle, sheader].forEach(el=>{
+    if(!el) return;
+    el.addEventListener('mousedown',  onStart);
+    el.addEventListener('touchstart', onStart, {passive:true});
+  });
+  document.addEventListener('mousemove',  onMove);
+  document.addEventListener('touchmove',  onMove, {passive:true});
+  document.addEventListener('mouseup',  onEnd);
   document.addEventListener('touchend', onEnd);
+
+  // 每次開啟 sheet 時重置為預設高度
+  const _origOpen = window.openSheet;
+  const _origAdd  = window.openAdd;
+  function resetH(){ sheet.style.height = Math.round(vh()*0.72)+'px'; }
+  // 用 MutationObserver 監聽 open class 新增
+  new MutationObserver(()=>{
+    if(sbg.classList.contains('open') && window.innerWidth < 900) resetH();
+  }).observe(sbg,{attributes:true,attributeFilter:['class']});
 })();
 
 
