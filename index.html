@@ -1532,7 +1532,15 @@ function scrollTabs(dx) {
   tabs.scrollBy({ left: dx, behavior: 'smooth' });
 }
 
-function setTab(t){curTab=t;render();}
+function setTab(t){
+  const same=(t===curTab);
+  curTab=t;render();
+  if(same){
+    // 點同一分類 → 回到最上方（mobile: window；PC: .app overflow scroll）
+    document.getElementById('mainApp').scrollTo({top:0,behavior:'smooth'});
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
 
 // Highlight matching keyword in text
 function hl(text, q){
