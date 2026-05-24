@@ -191,6 +191,16 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .memo-mobile-btn:hover{background:var(--s2)}
 @media(min-width:900px){.memo-mobile-btn{display:none}}
 
+/* ── Batch select mode ───────────────────────────────────── */
+.batch-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--accent);padding:10px 14px 16px;display:flex;align-items:center;gap:8px;z-index:85;box-shadow:0 -4px 20px rgba(0,0,0,.1);transform:translateY(100%);transition:transform .22s cubic-bezier(.32,1,.46,1);max-width:480px;margin:0 auto}
+.batch-bar.show{transform:translateY(0)}
+.ccard.selected{background:var(--abg)!important;outline:2px solid var(--accent);outline-offset:-1px}
+.sel-chk{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;margin-right:8px;background:var(--surface);font-size:11px;font-weight:700;color:transparent}
+.ccard.selected .sel-chk{background:var(--accent);border-color:var(--accent);color:#fff}
+@media(min-width:900px){
+  .pc-container .batch-bar{left:0;right:auto;max-width:min(45vw,600px);margin:0}
+}
+
 /* ── Dark Mode ────────────────────────────────────────────── */
 @media(prefers-color-scheme:dark){
   :root{
@@ -322,6 +332,7 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
       <button class="hbtn hbtn-xls" onclick="openImport()">📥 XLS 匯入</button>
       <button class="hbtn hbtn-sync" id="syncBtn" onclick="syncData()">🔄 同步</button>
       <button class="hbtn hbtn-sync" onclick="openBlacklist()">黑名單<span id="blCount"></span></button>
+      <button class="hbtn" id="selectModeBtn" onclick="toggleSelectMode()" style="background:var(--s2);color:var(--t2)">☑ 選取</button>
       <button class="hbtn" style="background:#FDECEC;color:#D63B3B;box-shadow:0 1px 3px rgba(214,59,59,.12)" onclick="clearAllData()">🗑️ 清除</button>
     </div>
     <div class="stats-bar" id="statsBar"></div>
@@ -357,8 +368,25 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
   </div><!-- /sticky-top -->
   <div class="list-wrap" id="listWrap"><div class="loading">⏳ 載入中…</div></div>
 </div>
-<button class="fab" onclick="openAdd()">＋</button>
+<button class="fab" id="fabBtn" onclick="openAdd()">＋</button>
 <div class="toast" id="toast"></div>
+
+<!-- Batch action bar -->
+<div class="batch-bar" id="batchBar">
+  <button id="batchSelAllBtn" onclick="batchSelectAll()" style="background:var(--s2);border:none;border-radius:var(--rs);padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--t2);white-space:nowrap;flex-shrink:0">全選</button>
+  <span id="batchCount" style="flex:1;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap">已選 0 筆</span>
+  <select id="batchHeat" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:7px 8px;font-size:12px;font-family:inherit;color:var(--text);outline:none;flex-shrink:0;-webkit-appearance:none">
+    <option value="">移動到…</option>
+    <option value="覆訪">🟡 覆訪</option>
+    <option value="最新資料">🔵 最新資料</option>
+    <option value="新鑫">🟣 新鑫</option>
+    <option value="待分類">🟤 待分類</option>
+    <option value="已簽約">🟢 已簽約</option>
+    <option value="無效案件">⚫ 無效案件</option>
+  </select>
+  <button onclick="applyBatchCategory()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--rs);padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0">套用</button>
+  <button onclick="exitSelectMode()" style="background:var(--s2);border:none;border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--t2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit">✕</button>
+</div>
 
 <!-- Client Sheet -->
 <div class="sbg" id="sheetBg">
@@ -580,7 +608,9 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
 const GAS_URL     = 'https://script.google.com/macros/s/AKfycbw8qfEZXC80D4DPM9qbFyUchc0_Nmwi0bD18L5N4KU63XyKQT_rijZDijxQe3gOZ3vk/exec';
 const COMPANY_URL = 'https://script.google.com/macros/s/AKfycby3bAIUQnUsCpcboXJeQZllFHlmlOOaEN7H2QCFsCMGNg9ab_c17F9dWVzFrCgxiMkcFg/exec';
 const API_TOKEN   = 'stanford87';
-const TODAY = new Date().toISOString().slice(0,10);
+// 用本地時間取日期字串，避免 UTC 時區偏移導致日期錯誤
+function localDateStr(d){ const x=d||new Date(); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; }
+const TODAY = localDateStr();
 const LOCAL_KEY     = 'loan_crm_v2';
 const BLACKLIST_KEY = 'loan_crm_blacklist';
 
@@ -745,7 +775,7 @@ function renderMemos(){
   if(lbl) lbl.textContent = active.length ? `${active.length} 項待辦` : '';
   // 清理超過14天的已完成備忘
   const cutoff14 = new Date(); cutoff14.setDate(cutoff14.getDate()-14);
-  const C14 = cutoff14.toISOString().slice(0,10);
+  const C14 = localDateStr(cutoff14);
   const before = memos.length;
   memos = memos.filter(m=>!m.done||!m.doneAt||m.doneAt>=C14);
   if(memos.length !== before) saveMemos();
@@ -779,7 +809,7 @@ function closeMemoModal(){
 function autoClassify() {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 7);
-  const CUTOFF = cutoff.toISOString().slice(0,10);
+  const CUTOFF = localDateStr(cutoff);
   let changed = false;
   clients.forEach(c => {
     // 舊資料遷移：追很緊 → 覆訪
@@ -846,7 +876,7 @@ function updateBlacklistBtn() {
 }
 
 // ── Google Sheets sync ────────────────────────────────────
-const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','總面積(坪)','主建物(坪)','附屬(坪)','公設(坪)','車位(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','地段號','建號','地號','Drive連結','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID'];
+const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','總面積(坪)','主建物(坪)','附屬(坪)','公設(坪)','車位(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','地段號','建號','地號','Drive連結','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID','置頂'];
 
 const toRow = c => [
   c.name||'', String(c.phone||''), c.idno||'', c.heat||'',
@@ -859,6 +889,7 @@ const toRow = c => [
   c.companyRaw?.process||'', c.companyRaw?.note||'',
   JSON.stringify(c.logs||[]), c.note||'',
   c.createdAt||'', c.updatedAt||'', c.id||'',
+  c.pinned?'1':'',
 ];
 
 const fromRow = (row, i) => {
@@ -883,6 +914,7 @@ const fromRow = (row, i) => {
     note:g(29), logs,
     companyRaw: Object.keys(companyRaw).length ? companyRaw : null,
     createdAt:g(30), updatedAt:g(31), debtPhones:[],
+    pinned: g(33)==='1',
   };
 };
 
@@ -944,7 +976,11 @@ async function syncData() {
     const res = await fetch(GAS_URL + '?token=' + API_TOKEN);
     const raw = await res.json();
     if(raw&&raw.length>1){
+      // 同步前先記住本地的置頂狀態，以防 Sheets 沒有該欄位
+      const localPins = new Set(clients.filter(c=>c.pinned).map(c=>String(c.id)));
       clients=raw.slice(1).filter(r=>r[0]).map((r,i)=>fromRow(r,i));
+      // 合回置頂狀態：sheet 有 OR 本地有，都算置頂
+      clients.forEach(c=>{ if(localPins.has(String(c.id))) c.pinned=true; });
       nextId=clients.length?Math.max(...clients.map(c=>c.id))+1:1;
       saveLocal(); showToast('✅ 同步成功');
     } else { await pushToSheet(); showToast('✅ 初始化完成'); }
@@ -1064,6 +1100,24 @@ function processCompanyData(raw) {
   // 6 = 建物所有權部（含所有權人姓名）
   // 13 = 他項權利部（含銀行/民間金額）
 
+  // 智慧合併新鑫備註：批次標頭更新，個人備註保留
+  // batchId = "1150318_資料 (4)"，rowNote = 該列第5欄的個別備註
+  function mergeXinNote(existing, batchId, rowNote){
+    const n = (existing||'').trim();
+
+    // 抽出現有備註中「批次標頭後面的個人備註」部分
+    // 舊格式：批次：2026/05/24（6）｜xxx  或  2026/05/24（6）｜xxx  或  1150318_資料 (4)｜xxx
+    let personal = n
+      .replace(/^批次：\d{4}[^\｜]*(｜\s*)?/, '')   // 移除 批次：日期 前綴
+      .replace(/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}[^\｜]*(｜\s*)?/, '') // 移除 YYYY/MM/DD 前綴
+      .replace(/^\d{7}_資料[^\｜]*(｜\s*)?/, '')     // 移除 1150318_資料 (N) 前綴
+      .trim();
+
+    // 優先用保留的 personal；若沒有則用本次匯入行的 rowNote
+    const keep = personal || rowNote || '';
+    return [batchId, keep].filter(Boolean).join('｜');
+  }
+
   let added=0, updated=0, skipped=0;
   let xinXinBatchDate = ''; // 追蹤新鑫批次日期
 
@@ -1074,22 +1128,9 @@ function processCompanyData(raw) {
     if(sheetName === '新鑫') {
       const name = String(row[0]||'').trim();
 
-      // 偵測批次日期行
+      // 偵測批次日期行（如 "1150318_資料 (6)"），直接保留原始字串
       if(!name || name.includes('_資料') || /^\d{4}-\d{2}-\d{2}/.test(name)) {
-        const dateMatch = name.match(/^(\d{7})/) || name.match(/^(\d{4}-\d{2}-\d{2})/);
-        const bracketMatch = name.match(/\((\d+)\)/);
-        const bracketNum = bracketMatch ? `（${bracketMatch[1]}）` : '';
-        if(dateMatch) {
-          const raw = dateMatch[1];
-          if(raw.length === 7) {
-            const y = parseInt(raw.slice(0,3)) + 1911;
-            const m = raw.slice(3,5);
-            const d = raw.slice(5,7);
-            xinXinBatchDate = `${y}/${m}/${d}${bracketNum}`;
-          } else {
-            xinXinBatchDate = raw + bracketNum;
-          }
-        }
+        if(name) xinXinBatchDate = name.trim(); // e.g. "1150318_資料 (6)"
         return;
       }
 
@@ -1098,7 +1139,7 @@ function processCompanyData(raw) {
       const note  = String(row[4]||'').trim();
       // 新鑫第1欄是身分證字號
       const xinIdno = String(row[1]||'').trim().match(/([A-Z]\d{9})/)?.[1] || '';
-      const fullNote = [xinXinBatchDate ? `批次：${xinXinBatchDate}` : '', note].filter(Boolean).join('｜');
+      const fullNote = [xinXinBatchDate || '', note].filter(Boolean).join('｜');
       const normPhone = phone.replace(/[-\s]/g,'');
 
       // 如果地址是空白，合併到上一筆同電話或同名的新鑫客戶
@@ -1128,9 +1169,13 @@ function processCompanyData(raw) {
       if(isBlacklisted(phone, xinIdno)){ skipped++; return; }
       if(existing){
         if(!existing.addr && addr) existing.addr = addr;
-        if(fullNote && !existing.note) existing.note = fullNote;
+        // 批次標頭一定更新，個人備註（用戶手寫或原始行備註）保留
+        if(xinXinBatchDate) existing.note = mergeXinNote(existing.note, xinXinBatchDate, note);
         if(!existing.idno && xinIdno) existing.idno = xinIdno;
-        existing.heat = '新鑫';
+        // 分類：用戶已手動設為最終狀態（已簽約/無效案件）則不動；
+        //       其餘情況才標記為新鑫（讓系統知道這是新鑫名單）
+        const protectedHeats = ['已簽約','無效案件'];
+        if(!protectedHeats.includes(existing.heat)) existing.heat = '新鑫';
         existing.updatedAt = TODAY;
         updated++;
       } else {
@@ -1376,7 +1421,10 @@ function processCompanyData(raw) {
     if(isBlacklisted(phone, idno)){ skipped++; return; }
 
     if(existing){
+      // ── 核心原則：用戶主動改過的欄位，匯入時一律不覆蓋 ──────────
+      // 公司資料（總檔來源）：永遠更新，這是總檔的職責
       existing.companyRaw = companyRaw;
+      // 空白才補，有值就保留用戶資料
       if(!existing.addr && addr) existing.addr = addr;
       if(!existing.idno && idno) existing.idno = idno;
       if(bank && !existing.bank) existing.bank = bank;
@@ -1389,8 +1437,11 @@ function processCompanyData(raw) {
       if(buildNo && !existing.buildNo) existing.buildNo = buildNo;
       if(landNos && !existing.landNo) existing.landNo = landNos;
       if(sectionName && !existing.purpose) existing.purpose = sectionName;
-      // 熱度：只有在客戶是「最新資料」預設狀態時才跟總檔更新，避免覆蓋手動設定
-      if(!existing.heat || existing.heat === '最新資料') existing.heat = heat;
+      // 分類：只有還是預設值（最新資料）或空白才更新，用戶改過的分類絕對不動
+      const defaultHeats = ['最新資料', ''];
+      if(defaultHeats.includes(existing.heat||'')) existing.heat = heat;
+      // 負債電話：空白才補
+      if(allDebtPhones.length && !existing.debtPhones?.length) existing.debtPhones = allDebtPhones;
       // 聯絡記錄：只加入新的，不恢復已刪除的
       if(processText){
         const newLogs = parseVisitLogs(processText);
@@ -1402,9 +1453,7 @@ function processCompanyData(raw) {
         });
         if(toAdd.length) existing.logs = [...toAdd, ...(existing.logs||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
       }
-      if(allDebtPhones.length) existing.debtPhones = allDebtPhones;
-      // driveUrl 不覆蓋，保留已建立的連結
-      existing.heat = heat;
+      // driveUrl、note、remind、job 等用戶欄位：完全不動
       existing.updatedAt = TODAY;
       updated++;
     } else {
@@ -1487,24 +1536,34 @@ const hCls={'待分類':'hp','覆訪':'hw','最新資料':'hc','已簽約':'hd',
 const hOrd={'待分類':0,'覆訪':1,'最新資料':2,'新鑫':3,'已簽約':4,'無效案件':5};
 const rOrd={over:0,today:1,soon:2,ok:3,null:4};
 
+let showFullTotal = false; // 手機端切換含無效總計
+
 function updateStats(){
   const inactive = ['已簽約','無效案件'];
   // 逾期：提醒日已過，非結案
   const over = clients.filter(c=>c.remind&&c.remind<TODAY&&!inactive.includes(c.heat)).length;
-  // 未排程：沒有提醒日，非結案（最容易被遺忘的一群）
+  // 未排程：沒有提醒日，非結案
   const noRemind = clients.filter(c=>!c.remind&&!inactive.includes(c.heat)).length;
   // 本週：今天起7天內有提醒（含今天）
   const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate()+7);
-  const WEEK_END = weekEnd.toISOString().slice(0,10);
+  const WEEK_END = localDateStr(weekEnd);
   const week = clients.filter(c=>c.remind&&c.remind>=TODAY&&c.remind<=WEEK_END).length;
-  // 總計
-  const total = clients.length;
+  // 總計：預設排除無效案件
+  const activeTotal = clients.filter(c=>c.heat!=='無效案件').length;
+  const fullTotal   = clients.length;
+  const dispN = showFullTotal ? fullTotal : activeTotal;
+  const dispL = showFullTotal ? '👥 含無效' : '👥 總計';
 
   document.getElementById('statsBar').innerHTML=`
     <div class="spill ${over?'alert':''}"><b>${over}</b><span>⚠️ 逾期</span></div>
     <div class="spill ${noRemind?'warn':''}"><b>${noRemind}</b><span>📋 未排程</span></div>
     <div class="spill ${week?'info':''}"><b>${week}</b><span>📅 本週</span></div>
-    <div class="spill"><b>${total}</b><span>👥 總計</span></div>
+    <div class="spill" id="totalSpill" style="cursor:pointer;user-select:none"
+      onmouseenter="totalHover(this,${fullTotal})"
+      onmouseleave="totalLeave(this,${activeTotal})"
+      onclick="totalClick()">
+      <b>${dispN}</b><span>${dispL}</span>
+    </div>
   `;
   // 瀏覽器標題顯示逾期數
   document.title = over > 0 ? `(${over}) 借款追蹤系統` : '借款追蹤系統';
@@ -1515,7 +1574,27 @@ function updateStats(){
   if(s('pc_over_num'))  s('pc_over_num').textContent=over;
   if(s('pc_today_num')) s('pc_today_num').textContent=tod;
   if(s('pc_hot_num'))   s('pc_hot_num').textContent=unclass;
-  if(s('pc_total_num')) s('pc_total_num').textContent=total;
+  if(s('pc_total_num')) s('pc_total_num').textContent=activeTotal;
+}
+
+// PC hover：暫時顯示含無效的完整數字
+function totalHover(el, full){
+  el.querySelector('b').textContent = full;
+  el.querySelector('span').textContent = '👥 含無效';
+  el.style.outline = '1.5px solid var(--border)';
+}
+function totalLeave(el, active){
+  el.style.outline = '';
+  if(!showFullTotal){
+    el.querySelector('b').textContent = active;
+    el.querySelector('span').textContent = '👥 總計';
+  }
+}
+// 手機端點擊切換
+function totalClick(){
+  if(!('ontouchstart' in window)) return; // PC 只用 hover，不 toggle
+  showFullTotal = !showFullTotal;
+  updateStats();
 }
 function updateTabs(){
   const cnt={
@@ -1529,7 +1608,7 @@ function updateTabs(){
     '已簽約': clients.filter(c=>c.heat==='已簽約').length,
     '無效案件': clients.filter(c=>c.heat==='無效案件').length,
   };
-  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'待分類',l:'待分類'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'新鑫',l:'新鑫'},{k:'已簽約',l:'已簽約'},{k:'無效案件',l:'無效案件'}];
+  const tabs=[{k:'all',l:'全部'},{k:'today',l:'今日'},{k:'over',l:'逾期'},{k:'覆訪',l:'覆訪'},{k:'最新資料',l:'最新資料'},{k:'新鑫',l:'新鑫'},{k:'待分類',l:'待分類'},{k:'已簽約',l:'已簽約'},{k:'無效案件',l:'無效案件'}];
   document.getElementById('tabsWrap').innerHTML=tabs.map(t=>{
     const n=cnt[t.k];
     return`<button class="tbtn ${curTab===t.k?'active':''}" onclick="setTab('${t.k}')">${t.l}${n?`<span style="font-size:10px;opacity:.65;margin-left:2px">(${n})</span>`:''}</button>`;
@@ -1631,11 +1710,14 @@ function render(){
     const lastLog=c.logs&&c.logs.length?c.logs[0]:null;
     const total=(c.bank||0)+(c.private||0);
     const heatCls=hCls[c.heat]||'';
-    return`<div class="ccard ${cls} heat-${heatCls}${c.pinned?' pinned':''}" onclick="openEdit(${c.id})">
+    const isSel=selectMode&&selectedIds.has(c.id);
+    const cardClick=selectMode?`toggleSelect(${c.id},event)`:`openEdit(${c.id})`;
+    return`<div class="ccard ${cls} heat-${heatCls}${c.pinned?' pinned':''}${isSel?' selected':''}" onclick="${cardClick}">
       <div class="ctop">
-        <div style="flex:1;min-width:0"><div class="cname">${hl(c.name||'',q)}</div><div class="cphone" onclick="handlePhoneClick(event,'${c.phone||''}')" style="${c.phone?'cursor:pointer;text-decoration:underline dotted':''}">${hl(c.phone||'',q)}</div></div>
+        ${selectMode?`<div class="sel-chk">${isSel?'✓':''}</div>`:''}
+        <div style="flex:1;min-width:0"><div class="cname">${hl(c.name||'',q)}</div><div class="cphone" onclick="${selectMode?'event.stopPropagation()':''};handlePhoneClick(event,'${c.phone||''}')" style="${c.phone&&!selectMode?'cursor:pointer;text-decoration:underline dotted':''}">${hl(c.phone||'',q)}</div></div>
         <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-          <button onclick="togglePin(${c.id},event)" title="${c.pinned?'取消置頂':'置頂'}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;line-height:1;opacity:${c.pinned?'1':'.25'};transition:opacity .15s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${c.pinned?'1':'.25'}'">📌</button>
+          ${selectMode?'':`<button onclick="togglePin(${c.id},event)" title="${c.pinned?'取消置頂':'置頂'}" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px;line-height:1;opacity:${c.pinned?'1':'.25'};transition:opacity .15s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='${c.pinned?'1':'.25'}'">📌</button>`}
           <span class="hbadge ${heatCls}">${c.heat}</span>
         </div>
       </div>
@@ -1667,6 +1749,77 @@ function togglePin(id, e) {
   saveLocal();
   render();
   showToast(c.pinned ? '📌 已置頂' : '已取消置頂');
+  pushToSheet().catch(()=>{});
+}
+
+// ── Batch select mode ─────────────────────────────────────
+let selectMode = false;
+let selectedIds = new Set();
+
+function getVisibleList(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  let list=[...clients];
+  if(curTab==='today') list=list.filter(c=>c.remind===TODAY);
+  else if(curTab==='over') list=list.filter(c=>c.remind&&c.remind<TODAY);
+  else if(curTab!=='all') list=list.filter(c=>c.heat===curTab);
+  if(q) list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.addr||'').toLowerCase().includes(q)||(c.idno||'').toLowerCase().includes(q)||(c.note||'').toLowerCase().includes(q));
+  if(selectedCities.size>0) list=list.filter(c=>ALL_CITIES.some(city=>selectedCities.has(city)&&((c.addr||'').startsWith(city)||(c.addr||'').startsWith(city.replace('台','臺')))));
+  return list;
+}
+
+function toggleSelectMode(){
+  selectMode=!selectMode;
+  selectedIds.clear();
+  const btn=document.getElementById('selectModeBtn');
+  if(selectMode){
+    btn.style.background='var(--abg)'; btn.style.color='var(--accent)'; btn.textContent='✕ 取消';
+  } else {
+    btn.style.background=''; btn.style.color=''; btn.textContent='☑ 選取';
+  }
+  updateBatchBar(); render();
+}
+
+function exitSelectMode(){
+  selectMode=false; selectedIds.clear();
+  const btn=document.getElementById('selectModeBtn');
+  if(btn){ btn.style.background=''; btn.style.color=''; btn.textContent='☑ 選取'; }
+  updateBatchBar(); render();
+}
+
+function toggleSelect(id, e){
+  e.stopPropagation();
+  if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  updateBatchBar(); render();
+}
+
+function batchSelectAll(){
+  const visible=getVisibleList();
+  const allSel=visible.length>0&&visible.every(c=>selectedIds.has(c.id));
+  if(allSel) visible.forEach(c=>selectedIds.delete(c.id));
+  else visible.forEach(c=>selectedIds.add(c.id));
+  updateBatchBar(); render();
+}
+
+function updateBatchBar(){
+  const bar=document.getElementById('batchBar');
+  bar.classList.toggle('show', selectMode);
+  document.getElementById('batchCount').textContent=`已選 ${selectedIds.size} 筆`;
+  const visible=getVisibleList();
+  const allSel=visible.length>0&&visible.every(c=>selectedIds.has(c.id));
+  document.getElementById('batchSelAllBtn').textContent=allSel?'取消全選':'全選';
+  const fab=document.getElementById('fabBtn');
+  if(fab) fab.style.display=selectMode?'none':'';
+}
+
+async function applyBatchCategory(){
+  const heat=document.getElementById('batchHeat').value;
+  if(!heat){ showToast('⚠️ 請選擇分類'); return; }
+  if(!selectedIds.size){ showToast('⚠️ 請先選取客戶'); return; }
+  const count=selectedIds.size;
+  clients.forEach(c=>{ if(selectedIds.has(c.id)){ c.heat=heat; c.updatedAt=TODAY; } });
+  saveLocal(); exitSelectMode();
+  try{ await pushToSheet(); showToast(`✅ 已將 ${count} 筆移到「${heat}」`); }
+  catch(e){ showToast(`✅ 已將 ${count} 筆移到「${heat}」（本地）`); }
 }
 
 async function clearRemind(e, id) {
@@ -1706,7 +1859,7 @@ function initNotifications() {
 function checkReminders() {
   if(!('Notification' in window)||Notification.permission!=='granted') return;
   const now=new Date();
-  const nowDate=now.toISOString().slice(0,10);
+  const nowDate=localDateStr(now);
   const nowTime=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   clients.forEach(c=>{
     if(c.remind===nowDate && c.remindTime===nowTime && !c._notified) {
@@ -1723,6 +1876,7 @@ initNotifications();
 document.addEventListener('keydown', e=>{
   const sheetOpen=document.getElementById('sheetBg').classList.contains('open');
   // Esc 關閉
+  if(e.key==='Escape' && selectMode){ exitSelectMode(); return; }
   if(e.key==='Escape' && sheetOpen){ closeSheet(); return; }
   // Ctrl+S 儲存
   if(e.ctrlKey && e.key==='s' && sheetOpen){ e.preventDefault(); saveClient(); return; }
@@ -1938,6 +2092,11 @@ function renderPriceEval(c) {
   const clientFloor = floorMatch ? parseInt(floorMatch[1]) : '';
   const floorDisplay = clientFloor && floors ? `${clientFloor}／${floors}` : (floors||'');
 
+  // 記住目前車位資料，渲染後還原並觸發計算
+  const savedParking  = c.parkType  || '無';
+  const savedParkArea = c.parkArea  || '';
+  const savedParkTitle= c.parkTitle || '非獨立';
+
   panel.innerHTML = `
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:13px;font-weight:600;color:var(--text)">📋 案件評估表</div>
@@ -1959,7 +2118,11 @@ function renderPriceEval(c) {
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>地址</label><input id="ev_addr" value="${addr}" placeholder="門牌地址"/></div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>社區名稱</label><input id="ev_community" placeholder="社區或大樓名稱"/></div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>建物（坪）</label><input type="number" id="ev_buildarea" value="${area}" placeholder="" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0">
+            <label>建物（坪）</label>
+            <input type="number" id="ev_buildarea" value="${area}" placeholder="" oninput="calcTotal()"/>
+            <div id="ev_buildarea_hint" style="font-size:11px;color:var(--orange);background:var(--obg);border-radius:6px;padding:3px 8px;margin-top:4px;display:none"></div>
+          </div>
           <div class="frow" style="margin:0"><label>土地（坪）</label><input type="number" id="ev_landarea" placeholder=""/></div>
         </div>
         <div class="fg2" style="margin-top:8px">
@@ -1974,8 +2137,8 @@ function renderPriceEval(c) {
         </div>
         <div class="frow" style="margin-top:8px"><label>車位權狀</label>
           <select id="ev_park_title" onchange="calcEvalBuildArea()">
-            <option value="非獨立">非獨立權狀（扣坪數）</option>
-            <option value="獨立">獨立權狀（不扣）</option>
+            <option value="非獨立">非獨立（面積含在建物內）</option>
+            <option value="獨立">獨立（另有獨立登記）</option>
           </select>
         </div>
         <div class="fg2" style="margin-top:8px">
@@ -2011,41 +2174,102 @@ function renderPriceEval(c) {
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">📊 行情估算</div>
         <div class="fg2">
-          <div class="frow" style="margin:0"><label>行情（萬/坪）</label><input type="number" id="ev_unitprice" placeholder="80" oninput="calcTotal()"/></div>
-          <div class="frow" style="margin:0"><label>估算總價（萬）</label><input type="number" id="ev_total" placeholder="自動計算"/></div>
+          <div class="frow" style="margin:0"><label>住宅行情（萬/坪）</label><input type="number" id="ev_unitprice" placeholder="80" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0"><label>住宅估值（萬）</label><input type="number" id="ev_house_val" placeholder="自動計算" readonly style="background:var(--s2)"/></div>
+        </div>
+        <div class="fg2" id="ev_park_val_row" style="margin-top:8px;display:none">
+          <div class="frow" style="margin:0"><label>車位估值（萬）</label><input type="number" id="ev_park_val" value="${c.parkVal||''}" placeholder="例：100" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0"><label style="color:var(--accent);font-weight:700">估算總價（萬）</label><input type="number" id="ev_total" placeholder="自動計算" readonly style="background:var(--abg);font-weight:700;color:var(--accent)"/></div>
+        </div>
+        <div id="ev_total_row" style="margin-top:8px">
+          <div class="frow" style="margin:0"><label style="color:var(--accent);font-weight:700">估算總價（萬）</label><input type="number" id="ev_total_noPark" placeholder="自動計算" readonly style="background:var(--abg);font-weight:700;color:var(--accent)"/></div>
         </div>
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">👤 客戶資訊</div>
         <div class="frow" style="margin-bottom:8px"><label>職業／收入</label><input id="ev_job" placeholder="例：上班族，月收5萬"/></div>
-        <div class="frow" style="margin-bottom:8px"><label>借款用途</label><input id="ev_purpose" value="${c.purpose||''}" placeholder="例：週轉、整合債務"/></div>
+        <div class="frow" style="margin-bottom:8px"><label>借款用途</label><input id="ev_purpose" value="${c.loanPurpose||''}" placeholder="例：週轉、整合債務"/></div>
         <div class="frow" style="margin-bottom:8px"><label>客戶需求</label><input id="ev_need" placeholder="例：需借500萬，1分以內"/></div>
         <div class="frow" style="margin-bottom:0"><label>備註（中人、注意事項）</label><textarea id="ev_note" style="height:70px" placeholder="例：中人需退2%，客戶態度保守"></textarea></div>
       </div>
     </div>
   `;
+
+  // 渲染完後還原車位設定，並立即觸發一次計算讓提示和欄位正確顯示
+  setTimeout(()=>{
+    const ep = document.getElementById('ev_parking');
+    const et = document.getElementById('ev_park_title');
+    const pa = document.getElementById('ev_parkarea');
+    // 如果有車位坪數但選項還是「無」，預設選「平面」
+    const hasParkArea = parseFloat(pa?.value) > 0;
+    if(ep){
+      if(savedParking !== '無') ep.value = savedParking;
+      else if(hasParkArea && ep.value === '無') ep.value = '平面';
+    }
+    if(et) et.value = savedParkTitle;
+    calcEvalBuildArea();
+  }, 0);
 }
 
 function calcEvalBuildArea(){
   const c = editId ? clients.find(x=>x.id===editId) : null;
-  const totalArea = c ? (c.area || (c.mainArea||0)+(c.subArea||0)+(c.commonArea||0)) : 0;
-  const parking = document.getElementById('ev_parking')?.value;
-  const parkArea = parseFloat(document.getElementById('ev_parkarea')?.value)||0;
+  const totalArea = parseFloat(document.getElementById('fArea')?.value) || (c ? (c.area || (c.mainArea||0)+(c.subArea||0)+(c.commonArea||0)+(c.parkArea||0)) : 0);
+  const parking = document.getElementById('ev_parking')?.value || '無';
+  const parkArea = parseFloat(document.getElementById('ev_parkarea')?.value) || 0;
   const isIndependent = document.getElementById('ev_park_title')?.value === '獨立';
+  const hasPark = parking !== '無' && parkArea > 0;
+
   let buildArea = totalArea;
-  if(parking !== '無' && parkArea && !isIndependent){
-    buildArea = Math.round((totalArea - parkArea)*100)/100;
+  let hint = '';
+
+  if(hasPark && !isIndependent){
+    // 非獨立：車位面積包含在總面積內，扣除後得到純住宅面積
+    buildArea = Math.round((totalArea - parkArea) * 100) / 100;
+    hint = `（已扣車位 ${parkArea} 坪）`;
+  } else if(hasPark && isIndependent){
+    // 獨立：車位另有登記，建物面積不含車位，直接用總面積
+    hint = `（車位獨立 ${parkArea} 坪）`;
   }
-  if(document.getElementById('ev_buildarea')) document.getElementById('ev_buildarea').value = buildArea||'';
+
+  const ba = document.getElementById('ev_buildarea');
+  const bh = document.getElementById('ev_buildarea_hint');
+  if(ba) ba.value = buildArea || '';
+  if(bh){
+    if(hint){
+      bh.textContent = hint;
+      bh.style.display = 'block';
+    } else {
+      bh.style.display = 'none';
+    }
+  }
+
+  // 有車位 → 顯示車位估值欄；無車位 → 顯示單一總價欄
+  const parkRow = document.getElementById('ev_park_val_row');
+  const totalRow = document.getElementById('ev_total_row');
+  if(parkRow) parkRow.style.display = hasPark ? 'grid' : 'none';
+  if(totalRow) totalRow.style.display = hasPark ? 'none' : 'block';
+
   calcTotal();
 }
 
-function calcTotal() {
+function calcTotal(){
   const unit = parseFloat(document.getElementById('ev_unitprice')?.value) || 0;
   const area = parseFloat(document.getElementById('ev_buildarea')?.value) || 0;
-  if(unit && area) {
-    document.getElementById('ev_total').value = Math.round(unit * area);
+  const houseVal = unit && area ? Math.round(unit * area) : 0;
+
+  const hv = document.getElementById('ev_house_val');
+  if(hv) hv.value = houseVal || '';
+
+  const hasPark = (document.getElementById('ev_parking')?.value || '無') !== '無';
+  if(hasPark){
+    const parkVal = parseFloat(document.getElementById('ev_park_val')?.value) || 0;
+    const total = houseVal + parkVal;
+    const t = document.getElementById('ev_total');
+    if(t) t.value = total || '';
+  } else {
+    const t = document.getElementById('ev_total_noPark');
+    if(t) t.value = houseVal || '';
   }
 }
 
@@ -2055,7 +2279,12 @@ function generateReport(clientId) {
 
   const g = id => document.getElementById(id)?.value || '';
 
-  const parking = g('ev_parking') === '無' ? '無車位' : `${g('ev_parking')}${g('ev_parkarea') ? '，車位'+g('ev_parkarea')+'坪' : ''}`;
+  const hasParkRpt = g('ev_parking') !== '無' && g('ev_parkarea');
+  const parkTitleRpt = g('ev_park_title') === '獨立' ? '獨立權狀' : '非獨立權狀';
+  const parkValRpt = g('ev_park_val') ? `，估值${g('ev_park_val')}萬` : '';
+  const parking = g('ev_parking') === '無' ? '無車位'
+    : `${g('ev_parking')}車位 ${g('ev_parkarea')}坪（${parkTitleRpt}${parkValRpt}）`;
+  const totalVal = hasParkRpt ? g('ev_total') : g('ev_total_noPark');
 
   const report =
 `地段：${g('ev_district')} ${g('ev_section')}
@@ -2075,8 +2304,8 @@ function generateReport(clientId) {
 屋況：${g('ev_condition')}
 抗性：${g('ev_resistance')}
 凶宅查詢：${g('ev_jinzhai')}
-行情：約 ${g('ev_unitprice')}萬／坪
-總價：約 ${g('ev_total')}萬
+住宅行情：約 ${g('ev_unitprice')}萬／坪
+估算總價：約 ${totalVal}萬${hasParkRpt?`（住宅${g('ev_house_val')}萬 + 車位${g('ev_park_val')||'?'}萬）`:''}
 
 客戶職業／收入：${g('ev_job')}
 借款用途：${g('ev_purpose')}
@@ -2200,11 +2429,15 @@ async function saveClient(){
     subArea:parseFloat(document.getElementById('fSubArea').value)||0,
     commonArea:parseFloat(document.getElementById('fCommonArea').value)||0,
     parkArea:parseFloat(document.getElementById('fParkArea').value)||0,
+    parkType:document.getElementById('ev_parking')?.value||'無',
+    parkTitle:document.getElementById('ev_park_title')?.value||'非獨立',
+    parkVal:parseFloat(document.getElementById('ev_park_val')?.value)||0,
     bank:parseFloat(document.getElementById('fBank').value)||0,
     legal:parseFloat(document.getElementById('fLegal').value)||0,
     private:parseFloat(document.getElementById('fPrivate').value)||0,
     extraLoans:[...extraLoans],
     purpose:document.getElementById('fPurpose').value.trim(),
+    loanPurpose:document.getElementById('ev_purpose')?.value?.trim()||'',
     buildNo:document.getElementById('fBuildNo').value.trim(),
     landNo:document.getElementById('fLandNo').value.trim(),
     driveUrl:document.getElementById('fDriveUrl').value.trim(),
