@@ -960,7 +960,7 @@ function updateBlacklistBtn() {
 }
 
 // ── Google Sheets sync ────────────────────────────────────
-const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','總面積(坪)','主建物(坪)','附屬(坪)','公設(坪)','車位(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','地段號','建號','地號','Drive連結','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID','置頂'];
+const HDR = ['姓名','電話','身分證','追蹤熱度','下次聯絡日期','提醒時間','提醒說明','工作','年資','財力證明','門牌地址','總面積(坪)','主建物(坪)','附屬(坪)','公設(坪)','車位(坪)','銀行貸款(萬)','法人(萬)','民間借貸(萬)','地段號','建號','地號','Drive連結','標示部','所有權部','他項權利部','拜訪過程','公司備註','聯絡記錄','備註','建立日期','更新日期','系統ID','置頂','資料JSON'];
 
 const toRow = c => [
   c.name||'', String(c.phone||''), c.idno||'', c.heat||'',
@@ -974,6 +974,18 @@ const toRow = c => [
   JSON.stringify(c.logs||[]), c.note||'',
   c.createdAt||'', c.updatedAt||'', c.id||'',
   c.pinned?'1':'',
+  JSON.stringify({
+    properties: c.properties||[],
+    evalData:   c.evalData||{},
+    extraLoans: c.extraLoans||[],
+    loanPurpose:c.loanPurpose||'',
+    parkType:   c.parkType||'無',
+    parkTitle:  c.parkTitle||'非獨立',
+    parkVal:    c.parkVal||0,
+    birthY:     c.birthY||0,
+    birthM:     c.birthM||0,
+    birthD:     c.birthD||0,
+  }),
 ];
 
 const fromRow = (row, i) => {
@@ -985,6 +997,9 @@ const fromRow = (row, i) => {
   if(g(23)||g(24)||g(25)){
     companyRaw = {buildInfo:g(23),owner:g(24),rights:g(25),process:g(26),note:g(27),addr:g(10),area:g(11)+'坪'};
   }
+  // 讀取富欄位 JSON（第 34 欄）
+  let rich = {};
+  try { rich = JSON.parse(g(34)||'{}'); } catch(e){ rich={}; }
   return {
     id: parseInt(g(32)) || (i+1),
     name:g(0), phone:fixPhone(g(1)), idno:g(2), heat:g(3)||'最新資料',
@@ -999,6 +1014,17 @@ const fromRow = (row, i) => {
     companyRaw: Object.keys(companyRaw).length ? companyRaw : null,
     createdAt:g(30), updatedAt:g(31), debtPhones:[],
     pinned: g(33)==='1',
+    // 富欄位：從 JSON 欄還原
+    properties:  rich.properties  || [],
+    evalData:    rich.evalData    || {},
+    extraLoans:  rich.extraLoans  || [],
+    loanPurpose: rich.loanPurpose || '',
+    parkType:    rich.parkType    || '無',
+    parkTitle:   rich.parkTitle   || '非獨立',
+    parkVal:     rich.parkVal     || 0,
+    birthY:      rich.birthY      || 0,
+    birthM:      rich.birthM      || 0,
+    birthD:      rich.birthD      || 0,
   };
 };
 
@@ -1060,10 +1086,8 @@ async function syncData() {
     const res = await fetch(GAS_URL + '?token=' + API_TOKEN);
     const raw = await res.json();
     if(raw&&raw.length>1){
-      // 同步前先記住本地的置頂狀態，以防 Sheets 沒有該欄位
-      const localPins = new Set(clients.filter(c=>c.pinned).map(c=>String(c.id)));
+      const localPins=new Set(clients.filter(c=>c.pinned).map(c=>String(c.id)));
       clients=raw.slice(1).filter(r=>r[0]).map((r,i)=>fromRow(r,i));
-      // 合回置頂狀態：sheet 有 OR 本地有，都算置頂
       clients.forEach(c=>{ if(localPins.has(String(c.id))) c.pinned=true; });
       nextId=clients.length?Math.max(...clients.map(c=>c.id))+1:1;
       saveLocal(); showToast('✅ 同步成功');
