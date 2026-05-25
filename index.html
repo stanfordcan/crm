@@ -158,6 +158,13 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 .imcancel{flex:1;background:none;border:1px solid var(--border);border-radius:var(--rs);padding:10px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--t2)}
 .imgo{flex:2;background:var(--green);color:#fff;border:none;border-radius:var(--rs);padding:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
 .imgo:disabled{opacity:.5}
+/* ── Note + DebtPhone row ───────────────────────────────── */
+.note-debt-row{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
+@media(min-width:900px){
+  .pc-container .note-debt-row{column-span:all;flex-direction:row;align-items:flex-start;gap:14px}
+  .pc-container .note-debt-row>.frow{flex:2;margin-bottom:0}
+  .pc-container .note-debt-row>#debtPhoneArea{flex:1;margin-top:17px}
+}
 /* ── Memo ────────────────────────────────────────────────── */
 .memo-wrap{width:100%}
 .memo-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -446,6 +453,18 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
     <div class="sbody">
       <div id="sp0">
         <div class="frow"><label>姓名 *</label><input id="fName" placeholder="客戶姓名"/></div>
+        <div class="frow">
+          <label>出生年月日（民國）</label>
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+            <input type="number" id="fBirthY" placeholder="年" min="1" max="130" oninput="calcAge()" style="width:72px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 10px;font-size:14px;color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none"/>
+            <span style="color:var(--t2);font-size:13px">年</span>
+            <input type="number" id="fBirthM" placeholder="月" min="1" max="12" oninput="calcAge()" style="width:55px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 8px;font-size:14px;color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none"/>
+            <span style="color:var(--t2);font-size:13px">月</span>
+            <input type="number" id="fBirthD" placeholder="日" min="1" max="31" oninput="calcAge()" style="width:55px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 8px;font-size:14px;color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none"/>
+            <span style="color:var(--t2);font-size:13px">日</span>
+            <div id="ageDisplay" style="display:none;background:var(--abg);color:var(--accent);border-radius:99px;padding:5px 14px;font-size:13px;font-weight:700;line-height:1.4"></div>
+          </div>
+        </div>
         <div class="fg2">
           <div class="frow"><label>電話</label><input id="fPhone" type="tel" placeholder="0912-345-678"/></div>
           <div class="frow"><label>身分證字號</label><input id="fIdno" placeholder="A123456789"/></div>
@@ -484,10 +503,12 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
             <div class="frow" style="margin:0"><label>說明</label><input id="fRemindNote" placeholder="再追一次"/></div>
           </div>
         </div>
-        <div class="frow"><label>備註</label><textarea id="fNote" placeholder="特殊情況、借款條件…"></textarea></div>
-        <div id="debtPhoneArea" style="display:none">
-          <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">債電（未確認）</div>
-          <div id="debtPhoneList" style="background:var(--s2);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);line-height:1.8"></div>
+        <div class="note-debt-row">
+          <div class="frow"><label>備註</label><textarea id="fNote" placeholder="特殊情況、借款條件…"></textarea></div>
+          <div id="debtPhoneArea" style="display:none">
+            <div style="font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px">債電（未確認）</div>
+            <div id="debtPhoneList" style="background:var(--s2);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);line-height:1.8"></div>
+          </div>
         </div>
       </div>
       <div id="sp1" style="display:none">
@@ -1932,7 +1953,8 @@ function openAdd(){
   editId=null;formDirty=false;
   document.getElementById('sheetTitle').textContent='新增客戶';
   document.getElementById('btnDel').style.display='none';
-  ['fName','fPhone','fIdno','fAddr','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears'].forEach(id=>document.getElementById(id).value='');
+  ['fName','fPhone','fIdno','fAddr','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears','fBirthY','fBirthM','fBirthD'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ageDisplay').style.display='none';
   document.getElementById('fDriveUrl').value='';
   document.getElementById('btnOpenDrive').style.display='none';
   document.getElementById('btnDrive').textContent='📁 建立';
@@ -1970,6 +1992,10 @@ function openEdit(id){
   document.getElementById('fNote').value=c.note||'';
   document.getElementById('fJob').value=c.job||'';
   document.getElementById('fJobYears').value=c.jobYears||'';
+  document.getElementById('fBirthY').value=c.birthY||'';
+  document.getElementById('fBirthM').value=c.birthM||'';
+  document.getElementById('fBirthD').value=c.birthD||'';
+  calcAge();
   document.getElementById('fAddr').value=c.addr||'';
   document.getElementById('fDriveUrl').value=c.driveUrl||'';
   const btnOpen=document.getElementById('btnOpenDrive');
@@ -2112,7 +2138,11 @@ function renderPriceEval(c) {
         </div>
         <div class="fg2" style="margin-top:8px">
           <div class="frow" style="margin:0"><label>地號</label><input id="ev_landno" value="${c.landNo||''}" placeholder=""/></div>
-          <div class="frow" style="margin:0"><label>土地使用分區</label><input id="ev_landzone" placeholder="例：住三"/></div>
+          <div class="frow" style="margin:0"><label>土地使用分區</label><div style="display:flex;gap:6px"><input id="ev_landzone" placeholder="例：住三" style="flex:1"/><button onclick="openLandZoneQuery()" style="flex-shrink:0;background:var(--s2);color:var(--t2);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🗺️ 查詢</button></div></div>
+        </div>
+        <div class="fg2" style="margin-top:8px">
+          <div class="frow" style="margin:0"><label>土增稅（一般）元</label><input type="number" id="ev_landtax_normal" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>土增稅（自用）元</label><input type="number" id="ev_landtax_self" placeholder=""/></div>
         </div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>建號</label><input id="ev_buildno" value="${c.buildNo||''}" placeholder=""/></div>
         <div class="frow" style="margin-top:8px;margin-bottom:0"><label>地址</label><input id="ev_addr" value="${addr}" placeholder="門牌地址"/></div>
@@ -2406,6 +2436,33 @@ function renderFinProofs(){
 }
 function addFinProof(){finProofs.push({type:'薪轉',value:''});renderFinProofs();}
 
+function openLandZoneQuery(){
+  const district = (document.getElementById('ev_district')?.value||'').trim();
+  const section  = (document.getElementById('ev_section')?.value||'').trim();
+  const landno   = (document.getElementById('ev_landno')?.value||'').trim();
+  const parts = [district, section, landno].filter(Boolean);
+  if(parts.length){
+    navigator.clipboard.writeText(parts.join(' ')).catch(()=>{});
+    showToast('📋 已複製：' + parts.join(' ') + '　貼入查詢欄即可');
+  }
+  window.open('https://luz.nlma.gov.tw/web/default.aspx', '_blank');
+}
+
+function calcAge(){
+  const y=parseInt(document.getElementById('fBirthY').value)||0;
+  const m=parseInt(document.getElementById('fBirthM').value)||0;
+  const d=parseInt(document.getElementById('fBirthD').value)||0;
+  const el=document.getElementById('ageDisplay');
+  if(!y||!m||!d||m<1||m>12||d<1||d>31){el.style.display='none';return;}
+  const adYear=y+1911;
+  const today=new Date();
+  let age=today.getFullYear()-adYear;
+  if(today.getMonth()+1<m||(today.getMonth()+1===m&&today.getDate()<d)) age--;
+  if(age<0||age>120){el.style.display='none';return;}
+  el.style.display='';
+  el.textContent=age+' 歲';
+}
+
 async function saveClient(){
   const name=document.getElementById('fName').value.trim();
   const phone=document.getElementById('fPhone').value.trim();
@@ -2421,6 +2478,9 @@ async function saveClient(){
     remindNote:document.getElementById('fRemindNote').value.trim(),
     job:document.getElementById('fJob').value.trim(),
     jobYears:document.getElementById('fJobYears').value.trim(),
+    birthY:parseInt(document.getElementById('fBirthY').value)||0,
+    birthM:parseInt(document.getElementById('fBirthM').value)||0,
+    birthD:parseInt(document.getElementById('fBirthD').value)||0,
     finProofs:[...finProofs],
     note:document.getElementById('fNote').value.trim(),
     addr:document.getElementById('fAddr').value.trim(),
