@@ -2452,10 +2452,12 @@ async function saveClient(){
   }
   saveLocal();
   formDirty=false;
-  try{await pushToSheet();showToast('✅ 已儲存並同步');}
-  catch(e){showToast('💾 已存本地');}
   btn.disabled=false;btn.textContent='儲存';
   closeSheet();render();
+  showToast('💾 已儲存');
+  pushToSheet()
+    .then(()=>showToast('✅ 同步完成'))
+    .catch(()=>{});
 }
 
 async function deleteClient(){
