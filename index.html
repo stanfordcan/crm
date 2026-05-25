@@ -525,13 +525,20 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
           <div id="propTabs" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0"></div>
           <button onclick="addProperty()" title="新增不動產" style="flex-shrink:0;background:var(--gbg);color:var(--green);border:1px solid #b8e0ce;border-radius:var(--rs);padding:5px 11px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;line-height:1">＋</button>
         </div>
-        <div class="fg2" style="grid-template-columns:2fr 1fr">
-          <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="" oninput="syncToEval('ev_addr', this.value)"/></div>
+        <div class="frow"><label>門牌地址</label><input id="fAddr" placeholder="" oninput="syncToEval('ev_addr', this.value);autoFillDistrict(this.value)"/></div>
+        <div class="fg2">
+          <div class="frow"><label>地段（區）</label><input id="fDistrict" placeholder="例：松山區" oninput="syncToEval('ev_district', this.value)"/></div>
           <div class="frow"><label>地段號</label><input id="fPurpose" placeholder="" oninput="syncToEval('ev_section', this.value)"/></div>
         </div>
+        <div class="frow"><label>土地使用分區</label><input id="fLandzone" placeholder="例：住三" oninput="syncToEval('ev_landzone', this.value)"/></div>
         <div class="fg2">
           <div class="frow"><label>建號（共同擔保）</label><input id="fBuildNo" placeholder="" oninput="syncToEval('ev_buildno', this.value)"/></div>
-          <div class="frow"><label>地號（共同擔保）</label><input id="fLandNo" placeholder="" oninput="syncToEval('ev_landno', this.value)"/></div>
+          <div class="frow"><label>地號①</label><input id="fLandNo" placeholder="" oninput="syncToEval('ev_landno', this.value);updateLandTotals()"/></div>
+        </div>
+        <div id="extraLandList" style="display:flex;flex-direction:column;gap:5px;margin-top:4px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <button onclick="addExtraLand()" style="font-size:12px;color:var(--accent);background:none;border:1px solid var(--border);border-radius:var(--rs);padding:6px 12px;cursor:pointer;font-family:inherit">＋ 新增地號</button>
+          <span id="extraLandTotal" style="font-size:12px;color:var(--t2);font-weight:600"></span>
         </div>
         <div class="form-section-hd">📐 面積</div>
         <div class="fg2">
@@ -542,7 +549,14 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
           <div class="frow"><label>附屬（坪）</label><input type="number" id="fSubArea" placeholder=""/></div>
           <div class="frow"><label>公設（坪）</label><input type="number" id="fCommonArea" placeholder=""/></div>
         </div>
-        <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="" oninput="syncEvalPark();syncToEval('ev_parkarea', this.value);calcEvalBuildArea()"/></div>
+        <div class="fg2">
+          <div class="frow"><label>車位坪數（手動填）</label><input type="number" id="fParkArea" placeholder="" oninput="syncEvalPark();syncToEval('ev_parkarea', this.value);calcEvalBuildArea()"/></div>
+          <div class="frow"><label>土地①（坪）</label><input type="number" id="fLandArea" placeholder="" oninput="updateLandTotals()"/></div>
+        </div>
+        <div class="fg2">
+          <div class="frow"><label>土增稅－一般（元）</label><input type="number" id="fLandtaxNormal" placeholder="" oninput="syncLandtax('normal', this.value)"/></div>
+          <div class="frow"><label>土增稅－自用（元）</label><input type="number" id="fLandtaxSelf" placeholder="" oninput="syncLandtax('self', this.value)"/></div>
+        </div>
         <div class="frow"><label>Google Drive 資料夾</label>
           <div style="display:flex;gap:8px">
             <input id="fDriveUrl" placeholder="尚未建立" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:13px;color:var(--t2);font-family:inherit;outline:none" readonly/>
@@ -2026,6 +2040,26 @@ function syncToEval(targetId, val) {
   const el = document.getElementById(targetId);
   if(el) el.value = val;
 }
+function syncLandtax(field, val){
+  const wan = val ? Math.round(parseFloat(val)/10000) || '' : '';
+  if(field==='normal'){
+    syncToEval('ev_landtax_normal', val);
+    syncToEval('ev_tax_general', wan);
+  } else {
+    syncToEval('ev_landtax_self', val);
+    syncToEval('ev_tax_self', wan);
+  }
+}
+function extractDistrict(addr){
+  return addr.match(/[一-鿿]+[市縣]([一-鿿]+[區鄉鎮市])/)?.[1] || '';
+}
+function autoFillDistrict(addr){
+  const d = extractDistrict(addr);
+  if(!d) return;
+  const fd = document.getElementById('fDistrict');
+  if(fd && !fd.value) fd.value = d;   // 空白才自動帶入
+  syncToEval('ev_district', d);
+}
 function refreshLoanSection() {
   const section = document.getElementById('ev_loan_section');
   if(!section) return;
@@ -2063,12 +2097,12 @@ function openAdd(){
   editId=null;formDirty=false;
   document.getElementById('sheetTitle').textContent='新增客戶';
   document.getElementById('btnDel').style.display='none';
-  ['fName','fPhone','fIdno','fAddr','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears','fBirthY','fBirthM','fBirthD'].forEach(id=>document.getElementById(id).value='');
+  ['fName','fPhone','fIdno','fAddr','fDistrict','fLandzone','fBuildNo','fLandNo','fRemindNote','fNote','fPurpose','fJob','fJobYears','fBirthY','fBirthM','fBirthD'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ageDisplay').style.display='none';
   document.getElementById('fDriveUrl').value='';
   document.getElementById('btnOpenDrive').style.display='none';
   document.getElementById('btnDrive').textContent='📁 建立';
-  ['fArea','fMainArea','fSubArea','fCommonArea','fParkArea','fBank','fLegal','fPrivate'].forEach(id=>document.getElementById(id).value='');
+  ['fArea','fMainArea','fSubArea','fCommonArea','fParkArea','fLandArea','fLandtaxNormal','fLandtaxSelf','fBank','fLegal','fPrivate'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fHeat').value='最新資料';
   document.getElementById('fRemind').value='';
   document.getElementById('fRemindHour').value='';
@@ -2079,6 +2113,7 @@ function openAdd(){
   document.getElementById('debtPhoneArea').style.display='none';
   finProofs=[];renderFinProofs();
   extraLoans=[];renderExtraLoans();
+  extraLands=[];renderExtraLands();
   tempLogs=[];renderLogs();sSTabTo(0);
   properties=[{...emptyProperty(0)}]; curPropIdx=0; renderPropTabs();
   setTimeout(()=>renderPriceEval({}), 100);
@@ -2196,43 +2231,52 @@ function renderPriceEval(c) {
   const panel = document.getElementById('priceEvalPanel');
   if(!panel) return;
 
+  const e = c.evalData || {};  // saved eval fields take priority
+
   const addr = c.addr || '';
   const buildInfo = c.companyRaw?.buildInfo || '';
 
-  // Parse buildInfo
+  // Parse buildInfo (used as fallback when evalData is absent)
   const buildNoMatch = buildInfo.match(/([A-Z]_\d+_\d+_\d+-\d+)/);
   const buildNo = buildNoMatch ? buildNoMatch[1] : (c.buildNo||'');
 
   const sectionFromBuild = buildInfo.match(/[一-鿿]+[市縣]\s+[一-鿿]+[區鄉鎮市]\s+([一-鿿]+段[一-鿿]*)\s+\d+/)?.[1] || '';
-  const section = c.purpose || document.getElementById('fPurpose')?.value || sectionFromBuild;
+  const sectionDerived = c.purpose || document.getElementById('fPurpose')?.value || sectionFromBuild;
 
   const districtFromBuild = buildInfo.match(/[一-鿿]+[市縣]\s+([一-鿿]+[區鄉鎮市])/)?.[1] || '';
-  const district = addr.match(/[一-鿿]+[市縣]([一-鿿]+[區鄉鎮市])/)?.[1] || districtFromBuild;
+  const districtDerived = addr.match(/[一-鿿]+[市縣]([一-鿿]+[區鄉鎮市])/)?.[1] || districtFromBuild;
 
   const floorsMatch = buildInfo.match(/0*(\d+)層/);
-  const floors = floorsMatch ? parseInt(floorsMatch[1]) : '';
+  const floorsDerived = floorsMatch ? parseInt(floorsMatch[1]) : '';
 
   const areaMatch = buildInfo.match(/（([\d.]+)坪）/);
-  const area = areaMatch ? areaMatch[1] : (c.area||'');
+  const areaDerived = areaMatch ? areaMatch[1] : (c.area||'');
 
   // 屋齡計算（民國年→西元）
   const yearMatch = buildInfo.match(/(\d+)年\d+月/);
-  let age = '';
+  let ageDerived = '';
   if(yearMatch) {
     const rocYear = parseInt(yearMatch[1]);
     const builtYear = rocYear + 1911;
-    age = new Date().getFullYear() - builtYear;
+    ageDerived = new Date().getFullYear() - builtYear;
   }
 
   // 所在樓層從地址抓
   const floorMatch = addr.match(/(\d+)樓/) || (c.companyRaw?.addr||'').match(/(\d+)樓/);
   const clientFloor = floorMatch ? parseInt(floorMatch[1]) : '';
-  const floorDisplay = clientFloor && floors ? `${clientFloor}／${floors}` : (floors||'');
+  const floorDisplayDerived = clientFloor && floorsDerived ? `${clientFloor}／${floorsDerived}` : (floorsDerived||'');
+
+  // evalData 優先（有填才用），否則從不動產欄位，最後 fallback 推算
+  const district  = e.district  || c.district || districtDerived;
+  const section   = e.section   || sectionDerived;
+  const area      = e.buildarea || areaDerived;
+  const floorDisp = e.floors    || floorDisplayDerived;
+  const age       = (e.age !== undefined && e.age !== '') ? e.age : ageDerived;
 
   // 記住目前車位資料，渲染後還原並觸發計算
-  const savedParking  = c.parkType  || '無';
+  const savedParking  = e.parking  || c.parkType  || '無';
   const savedParkArea = c.parkArea  || '';
-  const savedParkTitle= c.parkTitle || '非獨立';
+  const savedParkTitle= e.parkTitle || c.parkTitle || '非獨立';
 
   panel.innerHTML = `
     <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
@@ -2244,27 +2288,27 @@ function renderPriceEval(c) {
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🏠 不動產資訊</div>
         <div class="fg2">
-          <div class="frow" style="margin:0"><label>地段（區）</label><input id="ev_district" value="${district}" placeholder="例：松山區"/></div>
+          <div class="frow" style="margin:0"><label>地段（區）</label><input id="ev_district" value="${district}" placeholder="例：松山區" oninput="syncToEval('fDistrict',this.value)"/></div>
           <div class="frow" style="margin:0"><label>地段（段）</label><input id="ev_section" value="${section}" placeholder="例：延吉段三小段"/></div>
         </div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>地號</label><input id="ev_landno" value="${c.landNo||''}" placeholder=""/></div>
-          <div class="frow" style="margin:0"><label>土地使用分區</label><div style="display:flex;gap:6px"><input id="ev_landzone" placeholder="例：住三" style="flex:1"/><button onclick="openLandZoneQuery()" style="flex-shrink:0;background:var(--s2);color:var(--t2);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🗺️ 查詢</button></div></div>
+          <div class="frow" style="margin:0"><label>地號</label><input id="ev_landno" value="${[c.landNo||'',...(extraLands||[]).map(l=>l.landNo)].filter(Boolean).join('、')||e.landno||''}" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>土地使用分區</label><div style="display:flex;gap:6px"><input id="ev_landzone" value="${e.landzone||c.landzone||''}" placeholder="例：住三" style="flex:1" oninput="syncToEval('fLandzone',this.value)"/><button onclick="openLandZoneQuery()" style="flex-shrink:0;background:var(--s2);color:var(--t2);border:1px solid var(--border);border-radius:var(--rs);padding:0 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🗺️ 查詢</button></div></div>
         </div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>土增稅（一般）元</label><input type="number" id="ev_landtax_normal" placeholder=""/></div>
-          <div class="frow" style="margin:0"><label>土增稅（自用）元</label><input type="number" id="ev_landtax_self" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>土增稅（一般）元</label><input type="number" id="ev_landtax_normal" value="${e.landtaxNormal||c.landtaxNormal||''}" placeholder="" oninput="syncToEval('fLandtaxNormal',this.value)"/></div>
+          <div class="frow" style="margin:0"><label>土增稅（自用）元</label><input type="number" id="ev_landtax_self" value="${e.landtaxSelf||c.landtaxSelf||''}" placeholder="" oninput="syncToEval('fLandtaxSelf',this.value)"/></div>
         </div>
-        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>建號</label><input id="ev_buildno" value="${c.buildNo||''}" placeholder=""/></div>
-        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>地址</label><input id="ev_addr" value="${addr}" placeholder="門牌地址"/></div>
-        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>社區名稱</label><input id="ev_community" placeholder="社區或大樓名稱"/></div>
+        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>建號</label><input id="ev_buildno" value="${e.buildno||c.buildNo||''}" placeholder=""/></div>
+        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>地址</label><input id="ev_addr" value="${e.addr||addr}" placeholder="門牌地址"/></div>
+        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>社區名稱</label><input id="ev_community" value="${e.community||''}" placeholder="社區或大樓名稱"/></div>
         <div class="fg2" style="margin-top:8px">
           <div class="frow" style="margin:0">
             <label>建物（坪）</label>
             <input type="number" id="ev_buildarea" value="${area}" placeholder="" oninput="calcTotal()"/>
             <div id="ev_buildarea_hint" style="font-size:11px;color:var(--orange);background:var(--obg);border-radius:6px;padding:3px 8px;margin-top:4px;display:none"></div>
           </div>
-          <div class="frow" style="margin:0"><label>土地（坪）</label><input type="number" id="ev_landarea" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>土地（坪）</label><input type="number" id="ev_landarea" value="${e.landarea||c.landArea||''}" placeholder=""/></div>
         </div>
         <div class="fg2" style="margin-top:8px">
           <div class="frow" style="margin:0"><label>有無車位</label>
@@ -2283,7 +2327,7 @@ function renderPriceEval(c) {
           </select>
         </div>
         <div class="fg2" style="margin-top:8px">
-          <div class="frow" style="margin:0"><label>總樓層／所在樓層</label><input id="ev_floors" value="${floorDisplay}" placeholder="例：3／7"/></div>
+          <div class="frow" style="margin:0"><label>總樓層／所在樓層</label><input id="ev_floors" value="${floorDisp}" placeholder="例：3／7"/></div>
           <div class="frow" style="margin:0"><label>屋齡（年）</label><input type="number" id="ev_age" value="${age}" placeholder="20"/></div>
         </div>
       </div>
@@ -2291,35 +2335,35 @@ function renderPriceEval(c) {
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">💰 土增稅</div>
         <div class="fg2">
-          <div class="frow" style="margin:0"><label>一般（萬）</label><input type="number" id="ev_tax_general" placeholder=""/></div>
-          <div class="frow" style="margin:0"><label>自用（萬）</label><input type="number" id="ev_tax_self" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>一般（萬）</label><input type="number" id="ev_tax_general" value="${e.taxGeneral||(c.landtaxNormal?Math.round(c.landtaxNormal/10000):'')||''}" placeholder=""/></div>
+          <div class="frow" style="margin:0"><label>自用（萬）</label><input type="number" id="ev_tax_self" value="${e.taxSelf||(c.landtaxSelf?Math.round(c.landtaxSelf/10000):'')||''}" placeholder=""/></div>
         </div>
-        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>筆數</label><input type="number" id="ev_tax_count" placeholder="1"/></div>
+        <div class="frow" style="margin-top:8px;margin-bottom:0"><label>筆數</label><input type="number" id="ev_tax_count" value="${e.taxCount||([c.landNo||'',...(extraLands||[]).map(l=>l.landNo)].filter(Boolean).length)||''}" placeholder="1"/></div>
       </div>
 
       <div id="ev_loan_section" style="background:var(--s2);border-radius:var(--rs);padding:12px 14px;display:${(c.bank||c.legal||c.private||(extraLoans||[]).some(l=>l.name&&l.amount))?'block':'none'}">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🏦 貸款狀況</div>
         <div id="ev_bank_row" style="margin-bottom:8px;display:${c.bank?'block':'none'}"><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">銀行（萬）</label><input type="number" id="ev_bank" value="${c.bank||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div>
         <div id="ev_legal_row" style="margin-bottom:8px;display:${c.legal?'block':'none'}"><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">法人／租賃（萬）</label><input type="number" id="ev_legal" value="${c.legal||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div>
-        <div id="ev_private_row" style="margin-bottom:8px;display:${c.private?'block':'none'}"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px"><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">民間（萬）</label><input type="number" id="ev_private" value="${c.private||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">利率（分）</label><input type="number" id="ev_rate" placeholder="1.5" step="0.1" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div></div></div>
+        <div id="ev_private_row" style="margin-bottom:8px;display:${c.private?'block':'none'}"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px"><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">民間（萬）</label><input type="number" id="ev_private" value="${c.private||''}" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div><div><label style="font-size:11px;font-weight:600;color:var(--t2);display:block;margin-bottom:5px">利率（分）</label><input type="number" id="ev_rate" value="${e.rate||''}" placeholder="1.5" step="0.1" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 13px;font-size:14px;font-family:inherit;outline:none"/></div></div></div>
         ${(extraLoans||[]).map((l,i)=>l.name?`<div class="frow" style="margin-bottom:6px"><label>${l.name}（萬）</label><input type="number" id="ev_extra_${i}" value="${l.amount||''}"/></div>`:'').join('')}
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">🔍 物件評估</div>
-        <div class="frow" style="margin-bottom:8px"><label>屋況</label><input id="ev_condition" value="無" placeholder="例：良好、需整修"/></div>
-        <div class="frow" style="margin-bottom:8px"><label>抗性</label><input id="ev_resistance" value="無" placeholder="例：無、頂樓、一樓"/></div>
-        <div class="frow" style="margin-bottom:0"><label>凶宅查詢</label><input id="ev_jinzhai" value="無"/></div>
+        <div class="frow" style="margin-bottom:8px"><label>屋況</label><input id="ev_condition" value="${e.condition||'無'}" placeholder="例：良好、需整修"/></div>
+        <div class="frow" style="margin-bottom:8px"><label>抗性</label><input id="ev_resistance" value="${e.resistance||'無'}" placeholder="例：無、頂樓、一樓"/></div>
+        <div class="frow" style="margin-bottom:0"><label>凶宅查詢</label><input id="ev_jinzhai" value="${e.jinzhai||'無'}"/></div>
       </div>
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">📊 行情估算</div>
         <div class="fg2">
-          <div class="frow" style="margin:0"><label>住宅行情（萬/坪）</label><input type="number" id="ev_unitprice" placeholder="80" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0"><label>住宅行情（萬/坪）</label><input type="number" id="ev_unitprice" value="${e.unitprice||''}" placeholder="80" oninput="calcTotal()"/></div>
           <div class="frow" style="margin:0"><label>住宅估值（萬）</label><input type="number" id="ev_house_val" placeholder="自動計算" readonly style="background:var(--s2)"/></div>
         </div>
         <div class="fg2" id="ev_park_val_row" style="margin-top:8px;display:none">
-          <div class="frow" style="margin:0"><label>車位估值（萬）</label><input type="number" id="ev_park_val" value="${c.parkVal||''}" placeholder="例：100" oninput="calcTotal()"/></div>
+          <div class="frow" style="margin:0"><label>車位估值（萬）</label><input type="number" id="ev_park_val" value="${e.parkval||c.parkVal||''}" placeholder="例：100" oninput="calcTotal()"/></div>
           <div class="frow" style="margin:0"><label style="color:var(--accent);font-weight:700">估算總價（萬）</label><input type="number" id="ev_total" placeholder="自動計算" readonly style="background:var(--abg);font-weight:700;color:var(--accent)"/></div>
         </div>
         <div id="ev_total_row" style="margin-top:8px">
@@ -2329,10 +2373,10 @@ function renderPriceEval(c) {
 
       <div style="background:var(--s2);border-radius:var(--rs);padding:12px 14px">
         <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">👤 客戶資訊</div>
-        <div class="frow" style="margin-bottom:8px"><label>職業／收入</label><input id="ev_job" placeholder="例：上班族，月收5萬"/></div>
+        <div class="frow" style="margin-bottom:8px"><label>職業／收入</label><input id="ev_job" value="${e.job||c.job||''}" placeholder="例：上班族，月收5萬"/></div>
         <div class="frow" style="margin-bottom:8px"><label>借款用途</label><input id="ev_purpose" value="${c.loanPurpose||''}" placeholder="例：週轉、整合債務"/></div>
-        <div class="frow" style="margin-bottom:8px"><label>客戶需求</label><input id="ev_need" placeholder="例：需借500萬，1分以內"/></div>
-        <div class="frow" style="margin-bottom:0"><label>備註（中人、注意事項）</label><textarea id="ev_note" style="height:70px" placeholder="例：中人需退2%，客戶態度保守"></textarea></div>
+        <div class="frow" style="margin-bottom:8px"><label>客戶需求</label><input id="ev_need" value="${e.need||''}" placeholder="例：需借500萬，1分以內"/></div>
+        <div class="frow" style="margin-bottom:0"><label>備註（中人、注意事項）</label><textarea id="ev_note" style="height:70px" placeholder="例：中人需退2%，客戶態度保守">${e.evalNote||''}</textarea></div>
       </div>
     </div>
   `;
@@ -2419,6 +2463,7 @@ function generateReport(clientId) {
   if(!c) return;
 
   const g = id => document.getElementById(id)?.value || '';
+  const gn = id => parseFloat(document.getElementById(id)?.value) || 0;
 
   const hasParkRpt = g('ev_parking') !== '無' && g('ev_parkarea');
   const parkTitleRpt = g('ev_park_title') === '獨立' ? '獨立權狀' : '非獨立權狀';
@@ -2427,31 +2472,57 @@ function generateReport(clientId) {
     : `${g('ev_parking')}車位 ${g('ev_parkarea')}坪（${parkTitleRpt}${parkValRpt}）`;
   const totalVal = hasParkRpt ? g('ev_total') : g('ev_total_noPark');
 
+  // 土地：多地號合併格式
+  const mainLandNo=document.getElementById('fLandNo')?.value||'';
+  const mainLandArea=parseFloat(document.getElementById('fLandArea')?.value)||0;
+  const allLands=[
+    ...(mainLandNo||mainLandArea?[{landNo:mainLandNo,landArea:mainLandArea}]:[]),
+    ...extraLands.filter(l=>l.landNo||l.landArea)
+  ];
+  let landAreaStr,landNoStr;
+  if(allLands.length>1){
+    const parts=allLands.map(l=>l.landArea?l.landArea+'坪':'').filter(Boolean);
+    const total=allLands.reduce((s,l)=>s+(parseFloat(l.landArea)||0),0);
+    landAreaStr=parts.join('+')+`（共${total}坪）`;
+    landNoStr=allLands.map(l=>l.landNo).filter(Boolean).join('、');
+  } else {
+    landAreaStr=mainLandArea?mainLandArea+'坪':'—';
+    landNoStr=mainLandNo||g('ev_landno')||'—';
+  }
+
+  // 土增稅：優先讀「萬」欄，若空則 fallback 讀「元」欄自動換算
+  const taxGenWan  = gn('ev_tax_general')  || Math.round(gn('ev_landtax_normal') / 10000) || 0;
+  const taxSelfWan = gn('ev_tax_self')     || Math.round(gn('ev_landtax_self')   / 10000) || 0;
+  const taxCount   = g('ev_tax_count') || '1';
+  const taxStr = (taxGenWan || taxSelfWan)
+    ? `一般 ${taxGenWan}萬、自用 ${taxSelfWan}萬＜共${taxCount}筆＞`
+    : '—';
+
   const report =
 `地段：${g('ev_district')} ${g('ev_section')}
-地號：${g('ev_landno')}
-土地使用分區：${g('ev_landzone')}
-建號：${g('ev_buildno')}
-地址：${g('ev_addr')}
-社區名稱：${g('ev_community')}
+地號：${landNoStr}
+土地使用分區：${g('ev_landzone')||'—'}
+建號：${g('ev_buildno')||'—'}
+地址：${g('ev_addr')||'—'}
+社區名稱：${g('ev_community')||'—'}
 建物：${g('ev_buildarea')}坪（${parking}）
-土地：${g('ev_landarea')}坪
-總樓層：${g('ev_floors')}層
-屋齡：${g('ev_age')}年
-土增稅：一般 ${g('ev_tax_general')}萬、自用 ${g('ev_tax_self')}萬＜共${g('ev_tax_count')}筆＞
+土地：${landAreaStr}
+總樓層：${g('ev_floors')||'—'}層
+屋齡：${g('ev_age')||'—'}年
+土增稅：${taxStr}
 銀行：${g('ev_bank')?g('ev_bank')+'萬':'—'}
 法人：${g('ev_legal')?g('ev_legal')+'萬':'—'}
 私人：${g('ev_private')?g('ev_private')+'萬／'+g('ev_rate')+'分':'—'}
-屋況：${g('ev_condition')}
-抗性：${g('ev_resistance')}
-凶宅查詢：${g('ev_jinzhai')}
-住宅行情：約 ${g('ev_unitprice')}萬／坪
-估算總價：約 ${totalVal}萬${hasParkRpt?`（住宅${g('ev_house_val')}萬 + 車位${g('ev_park_val')||'?'}萬）`:''}
+屋況：${g('ev_condition')||'—'}
+抗性：${g('ev_resistance')||'—'}
+凶宅查詢：${g('ev_jinzhai')||'—'}
+住宅行情：約 ${g('ev_unitprice')||'—'}萬／坪
+估算總價：約 ${totalVal||'—'}萬${hasParkRpt?`（住宅${g('ev_house_val')}萬 + 車位${g('ev_park_val')||'?'}萬）`:''}
 
-客戶職業／收入：${g('ev_job')}
-借款用途：${g('ev_purpose')}
-客戶需求：${g('ev_need')}
-備註：${g('ev_note')}`;
+客戶職業／收入：${g('ev_job')||'—'}
+借款用途：${g('ev_purpose')||'—'}
+客戶需求：${g('ev_need')||'—'}
+備註：${g('ev_note')||'—'}`;
 
   const win = window.open('', '_blank');
   win.document.write(`
@@ -2521,6 +2592,35 @@ function removeLog(i){
 
 // ── Extra Loans ───────────────────────────────────────────
 let extraLoans=[];
+let extraLands=[];
+
+function renderExtraLands(){
+  const container=document.getElementById('extraLandList');if(!container)return;
+  const iStyle='background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;font-size:13px;font-family:inherit;outline:none';
+  container.innerHTML=extraLands.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px">
+    <input placeholder="地號" value="${l.landNo||''}" onchange="extraLands[${i}].landNo=this.value;updateLandTotals()" style="flex:2;${iStyle}"/>
+    <input type="number" placeholder="坪" value="${l.landArea||''}" onchange="extraLands[${i}].landArea=parseFloat(this.value)||0;updateLandTotals()" style="flex:1;${iStyle}"/>
+    <button onclick="extraLands.splice(${i},1);renderExtraLands()" style="background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;flex-shrink:0;padding:0 4px">✕</button>
+  </div>`).join('');
+  updateLandTotals();
+}
+function addExtraLand(){extraLands.push({landNo:'',landArea:0});renderExtraLands();}
+function updateLandTotals(){
+  const mainArea=parseFloat(document.getElementById('fLandArea')?.value)||0;
+  const extraTotal=extraLands.reduce((s,l)=>s+(parseFloat(l.landArea)||0),0);
+  const total=mainArea+extraTotal;
+  const totalEl=document.getElementById('extraLandTotal');
+  if(totalEl) totalEl.textContent=extraLands.length>0&&total>0?`合計：${total}坪`:'';
+  // 同步到房價評估
+  const mainNo=document.getElementById('fLandNo')?.value||'';
+  const allNos=[mainNo,...extraLands.map(l=>l.landNo)].filter(Boolean);
+  syncToEval('ev_landno', allNos.join('、'));
+  syncToEval('ev_landarea', total||mainArea||'');
+  // 筆數 = 有地號的筆數
+  const landCount=allNos.length;
+  if(landCount>0) syncToEval('ev_tax_count', landCount);
+}
+
 function renderExtraLoans(){
   const container=document.getElementById('extraLoanList');if(!container)return;
   container.innerHTML=extraLoans.map((l,i)=>`<div style="display:flex;align-items:center;gap:6px">
@@ -2579,9 +2679,9 @@ let properties = [];
 let curPropIdx = 0;
 
 function emptyProperty(n){
-  return {pid:Date.now()+n,label:`不動產${n+1}`,addr:'',purpose:'',buildNo:'',landNo:'',
-    area:0,mainArea:0,subArea:0,commonArea:0,parkArea:0,
-    bank:0,legal:0,private:0,extraLoans:[],driveUrl:'',
+  return {pid:Date.now()+n,label:`不動產${n+1}`,addr:'',district:'',landzone:'',purpose:'',buildNo:'',landNo:'',
+    area:0,mainArea:0,subArea:0,commonArea:0,parkArea:0,landArea:0,
+    bank:0,legal:0,private:0,extraLoans:[],extraLands:[],driveUrl:'',
     parkType:'無',parkTitle:'非獨立',parkVal:0,landtaxNormal:0,landtaxSelf:0};
 }
 
@@ -2589,9 +2689,9 @@ function migrateProperties(c){
   if(c.properties&&c.properties.length) return c.properties.map(p=>({...emptyProperty(0),...p}));
   const p=emptyProperty(0);
   if(c.buildNo) p.label=`建${c.buildNo.replace(/-0+$/,'')}`;
-  Object.assign(p,{addr:c.addr||'',purpose:c.purpose||'',buildNo:c.buildNo||'',landNo:c.landNo||'',
+  Object.assign(p,{addr:c.addr||'',district:c.district||extractDistrict(c.addr||''),landzone:c.landzone||'',purpose:c.purpose||'',buildNo:c.buildNo||'',landNo:c.landNo||'',
     area:c.area||0,mainArea:c.mainArea||0,subArea:c.subArea||0,commonArea:c.commonArea||0,
-    parkArea:c.parkArea||0,bank:c.bank||0,legal:c.legal||0,private:c.private||0,
+    parkArea:c.parkArea||0,landArea:c.landArea||0,bank:c.bank||0,legal:c.legal||0,private:c.private||0,
     extraLoans:c.extraLoans||[],driveUrl:c.driveUrl||'',
     parkType:c.parkType||'無',parkTitle:c.parkTitle||'非獨立',parkVal:c.parkVal||0,
     landtaxNormal:c.landtaxNormal||0,landtaxSelf:c.landtaxSelf||0});
@@ -2602,14 +2702,36 @@ function renderPropTabs(){
   const el=document.getElementById('propTabs');
   if(!el) return;
   el.innerHTML=properties.map((p,i)=>`
-    <button onclick="switchProperty(${i})" style="border:none;border-radius:var(--rs);padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;${i===curPropIdx?'background:var(--accent);color:#fff':'background:var(--s2);color:var(--t2)'}">
+    <button data-propidx="${i}" onclick="switchProperty(${i})" ondblclick="startRenameTab(event,${i})" title="雙擊重新命名" style="border:none;border-radius:var(--rs);padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .12s;white-space:nowrap;${i===curPropIdx?'background:var(--accent);color:#fff':'background:var(--s2);color:var(--t2)'}">
       ${p.label||`不動產${i+1}`}${properties.length>1?`<span onclick="event.stopPropagation();removeProperty(${i})" style="margin-left:5px;opacity:.7;font-size:11px">✕</span>`:''}
     </button>`).join('');
+}
+
+function startRenameTab(e,idx){
+  e.stopPropagation();
+  const btn=document.querySelector(`#propTabs [data-propidx="${idx}"]`);
+  if(!btn) return;
+  const cur=properties[idx].label||`不動產${idx+1}`;
+  const isActive=idx===curPropIdx;
+  btn.innerHTML=`<input type="text" value="${cur}" onclick="event.stopPropagation()"
+    style="width:88px;border:none;background:${isActive?'rgba(255,255,255,.2)':'var(--bg)'};font-weight:600;font-size:12px;color:inherit;outline:none;border-bottom:1px solid ${isActive?'rgba(255,255,255,.7)':'var(--accent)'};padding:0 2px;font-family:inherit"
+    onblur="finishRenameTab(this,${idx})"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){renderPropTabs();}">`;
+  btn.querySelector('input').focus();
+  btn.querySelector('input').select();
+}
+
+function finishRenameTab(inp,idx){
+  const v=inp.value.trim();
+  if(v) properties[idx].label=v;
+  renderPropTabs();
 }
 
 function savePropFields(){
   const p=properties[curPropIdx]; if(!p) return;
   p.addr=document.getElementById('fAddr')?.value.trim()||'';
+  p.district=document.getElementById('fDistrict')?.value.trim()||'';
+  p.landzone=document.getElementById('fLandzone')?.value.trim()||'';
   p.purpose=document.getElementById('fPurpose')?.value.trim()||'';
   p.buildNo=document.getElementById('fBuildNo')?.value.trim()||'';
   p.landNo=document.getElementById('fLandNo')?.value.trim()||'';
@@ -2618,19 +2740,25 @@ function savePropFields(){
   p.subArea=parseFloat(document.getElementById('fSubArea')?.value)||0;
   p.commonArea=parseFloat(document.getElementById('fCommonArea')?.value)||0;
   p.parkArea=parseFloat(document.getElementById('fParkArea')?.value)||0;
+  p.landArea=parseFloat(document.getElementById('fLandArea')?.value)||0;
+  p.landtaxNormal=parseFloat(document.getElementById('fLandtaxNormal')?.value)||0;
+  p.landtaxSelf=parseFloat(document.getElementById('fLandtaxSelf')?.value)||0;
   p.bank=parseFloat(document.getElementById('fBank')?.value)||0;
   p.legal=parseFloat(document.getElementById('fLegal')?.value)||0;
   p.private=parseFloat(document.getElementById('fPrivate')?.value)||0;
   p.driveUrl=document.getElementById('fDriveUrl')?.value.trim()||'';
   p.extraLoans=[...extraLoans];
+  p.extraLands=[...extraLands];
   if(p.buildNo) p.label=`建${p.buildNo.replace(/-0+$/,'')}`;
-  else if(p.addr) p.label=p.addr.slice(-12);
+  else if(p.addr){const m=p.addr.match(/[區鄉鎮市](.+)$/);p.label=(m?m[1]:p.addr).slice(0,14);}
   else p.label=`不動產${curPropIdx+1}`;
 }
 
 function loadPropFields(idx){
   const p=properties[idx]; if(!p) return;
   document.getElementById('fAddr').value=p.addr||'';
+  document.getElementById('fDistrict').value=p.district||extractDistrict(p.addr||'');
+  document.getElementById('fLandzone').value=p.landzone||'';
   document.getElementById('fPurpose').value=p.purpose||'';
   document.getElementById('fBuildNo').value=p.buildNo||'';
   document.getElementById('fLandNo').value=p.landNo||'';
@@ -2640,6 +2768,9 @@ function loadPropFields(idx){
   document.getElementById('fSubArea').value=p.subArea||'';
   document.getElementById('fCommonArea').value=p.commonArea||'';
   document.getElementById('fParkArea').value=p.parkArea||'';
+  document.getElementById('fLandArea').value=p.landArea||'';
+  document.getElementById('fLandtaxNormal').value=p.landtaxNormal||'';
+  document.getElementById('fLandtaxSelf').value=p.landtaxSelf||'';
   document.getElementById('fBank').value=p.bank||'';
   document.getElementById('fLegal').value=p.legal||'';
   document.getElementById('fPrivate').value=p.private||'';
@@ -2648,6 +2779,7 @@ function loadPropFields(idx){
   if(p.driveUrl){btnO.style.display='';btnC.textContent='✅ 已建立';}
   else{btnO.style.display='none';btnC.textContent='📁 建立';}
   extraLoans=[...(p.extraLoans||[])]; renderExtraLoans(); refreshLoanSection();
+  extraLands=[...(p.extraLands||[])]; renderExtraLands();
 }
 
 function switchProperty(idx){
@@ -2695,7 +2827,8 @@ const BANK_KW=['銀行','合作社','農會','漁會','儲蓄'];
 const LEGAL_KW=['資產管理','融資','租賃','投資'];
 
 if(typeof pdfjsLib!=='undefined'){
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  // Use empty string → PDF.js runs in main thread (avoids CORS issues with local file://)
+  pdfjsLib.GlobalWorkerOptions.workerSrc='';
 }
 
 function openTenModal(){
@@ -2713,46 +2846,62 @@ function openTenModal(){
 }
 function closeTenModal(){document.getElementById('tenBg').classList.remove('open');}
 
-function normNum(s){return s.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));}
+function normNum(s){
+  return s
+    .replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/，/g,',')   // full-width comma in amounts
+    .replace(/　/g,' ');  // full-width space
+}
 
 function detectTenType(text){
-  if(/建物標示部/.test(text)) return 'biao';
+  // Content-based detection first (more reliable than title-only matching)
+  if(/層次面積|建築完成日期|主要構造|主要用途/.test(text)) return 'biao';
+  if(/所有權人姓名|所有權人統一編號|登記原因.*(?:買賣|繼承|贈與)/.test(text)) return 'suo';
+  if(/擔保債權總金額|最高限額|設定權利範圍|抵押權/.test(text)) return 'ta';
+  // Title-based fallback
+  if(/建物標示部|標示部/.test(text)) return 'biao';
   if(/土地標示部/.test(text)) return 'land';
-  if(/建物所有權部/.test(text)) return 'suo';
+  if(/建物所有權部|所有權部/.test(text)) return 'suo';
   if(/建物他項權利部|土地他項權利部/.test(text)) return 'ta';
   return 'unknown';
 }
 
 function parseBiao(text){
   const t=normNum(text); const r={};
-  r.city=(t.match(/縣市(?:名稱)?\s+([一-鿿]+[市縣])/)||[])[1]||'';
-  r.dist=(t.match(/鄉鎮市區\s+([一-鿿]+[區鄉鎮市])/)||[])[1]||'';
-  r.purpose=(t.match(/地段\s+\d+\s+([一-鿿]+段[一-鿿]*)/)||[])[1]||'';
-  r.buildNo=(t.match(/建號\s+(\d{3,6}-\d{3})/)||[])[1]||'';
-  const rawAddr=(t.match(/建物門牌\s+(\S+)/)||[])[1]||'';
-  r.addr=(r.city+r.dist+rawAddr).trim();
-  r.landNo=(t.match(/建物坐落地號[\s\S]{0,10}段(\d+-\d+)/)||[])[1]||'';
-  const mainM2=parseFloat((t.match(/層次面積\s+([\d.]+)平方公尺/)||[])[1]||0);
-  const subM2=parseFloat((t.match(/附屬建物用途[\s\S]{0,30}面積\s+([\d.]+)平方公尺/)||[])[1]||0);
-  const cmM=t.match(/權利範圍\s+(\d+)分之(\d+)\s+面積\s+([\d,]+\.?\d*)平方公尺/);
+  r.city=(t.match(/縣市(?:名稱)?\s*([一-鿿]+?[市縣])/)||[])[1]||'';
+  r.dist=(t.match(/[鄉縣]鎮市區\s*([一-鿿]+?[區鄉鎮市])/)||[])[1]||'';
+  r.purpose=(t.match(/地段\s*\d*\s*([一-鿿]+?段(?:[一-鿿]+小段)?)/)||[])[1]||'';
+  r.buildNo=(t.match(/建號\s*0*(\d{3,6}[-－]\d{3})/)||[])[1]||
+            (t.match(/0*(\d{3,6}[-－]\d{3})\s*建號/)||[])[1]||'';
+  const rawAddr=(t.match(/建物門牌\s*([^\n]+)/)||[])[1]?.trim()||'';
+  // 門牌 usually already contains full address; only prefix city+dist if it doesn't
+  const addrHasCity=r.city&&rawAddr.startsWith(r.city);
+  r.addr=(addrHasCity?rawAddr:(r.city+r.dist+rawAddr)).replace(/\s+/g,'').trim();
+  r.landNo=(t.match(/建物坐落地號[\s\S]{0,40}?(\d{3,6}[-－]\d{3,6})/)||[])[1]||'';
+  const mainM2=parseFloat((t.match(/層次面積\s*([\d.]+)\s*平方公尺/)||[])[1]||0);
+  const subM2=parseFloat((t.match(/附屬建物[\s\S]{0,60}?面積\s*([\d.]+)\s*平方公尺/)||[])[1]||0);
+  const cmM=t.match(/權利範圍\s*(\d+)分之(\d+)\s*[\s\S]{0,20}?面積\s*([\d,]+\.?\d*)\s*平方公尺/);
   const commonM2=cmM?parseFloat(cmM[3].replace(/,/g,''))*parseInt(cmM[2])/parseInt(cmM[1]):0;
   const toP=v=>Math.round((v||0)*0.3025*100)/100;
   r.mainArea=toP(mainM2); r.subArea=toP(subM2); r.commonArea=toP(commonM2);
   r.area=toP(mainM2+subM2+commonM2);
-  const yrM=t.match(/建築完成日期\s+民國(\d+)年/);
+  const yrM=t.match(/建築完成日期\s*民國\s*(\d+)\s*年/);
   if(yrM) r.buildYear=parseInt(yrM[1])+1911;
-  r.floors=parseInt((t.match(/層數\s+0*(\d+)層/)||[])[1]||0);
+  r.floors=parseInt((t.match(/層數\s*0*(\d+)\s*層/)||[])[1]||0);
   return r;
 }
 
 function parseSuo(text){
   const t=normNum(text); const r={};
-  r.name=(t.match(/所有權人姓名\s+(\S+)/)||[])[1]||'';
-  r.idno=(t.match(/統一編號\s+(\S+)/)||[])[1]||'';
-  r.ownerAddr=(t.match(/住址\s+(\S+)/)||[])[1]||'';
+  r.name=(t.match(/所有權人(?:姓名)?\s*([^\s\n一-鿿]{0}[^\d\s\n(（]{2,8})/)||[])[1]||
+         (t.match(/姓名\s*([^\s\n]{2,8})/)||[])[1]||'';
+  r.idno=(t.match(/統一編號\s*([A-Za-z]\d{9})/)||
+         t.match(/(?:身分證|證統)\s*([A-Za-z]\d{9})/)
+         ||[])[1]||'';
+  r.ownerAddr=(t.match(/住址\s*([^\n]+)/)||[])[1]?.trim()||'';
   if(/預告登記/.test(t)){
-    const req=(t.match(/請求權人[：:]\s*(\S+)/)||[])[1]||'';
-    const obl=(t.match(/義務人[：:]\s*([一-鿿\w]+)/)||[])[1]||'';
+    const req=(t.match(/請求權人[：:\s]*([^\n,，]+)/)||[])[1]?.trim()||'';
+    const obl=(t.match(/義務人[：:\s]*([^\n,，]+)/)||[])[1]?.trim()||'';
     r.note=`⚠️ 預告登記：${req}，義務人：${obl}`;
   }
   return r;
@@ -2760,10 +2909,12 @@ function parseSuo(text){
 
 function parseTa(text){
   const t=normNum(text); const r={loans:[]};
-  const creditor=(t.match(/權利人姓名\s+(\S+)/)||[])[1]||'';
-  const amtM=t.match(/擔保債權總金額\s+新台幣\s*([\d,]+)元/);
+  const creditor=(t.match(/權利人(?:姓名)?\s*([^\n]{2,30})/)||[])[1]?.trim()||'';
+  // Amount: try various label formats
+  const amtM=t.match(/擔保債權(?:總金額|金額)\s*(?:新台幣|新臺幣)?\s*([\d,]+)\s*元/) ||
+             t.match(/(?:新台幣|新臺幣)\s*([\d,]+)\s*元/);
   const amt=amtM?Math.round(parseInt(amtM[1].replace(/,/g,''))/10000):0;
-  const reason=(t.match(/登記原因\s+(\S+)/)||[])[1]||'';
+  const reason=(t.match(/登記原因\s*([^\n]+)/)||[])[1]?.trim()||'';
   const confirmed=/已確定/.test(t);
   if(creditor&&amt){
     const isBank=BANK_KW.some(k=>creditor.includes(k));
@@ -2777,18 +2928,36 @@ async function extractPdfText(file){
   if(typeof pdfjsLib==='undefined') throw new Error('PDF.js 未載入');
   const buf=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-  let text='';
+  const pages=[];
   for(let i=1;i<=pdf.numPages;i++){
     const pg=await pdf.getPage(i);
     const ct=await pg.getTextContent();
-    text+=ct.items.map(x=>x.str).join(' ')+'\n';
+    const items=ct.items.filter(x=>x.str.trim());
+    if(!items.length){pages.push('');continue;}
+    // Group by Y position → same visual row joined without space
+    const rows=new Map();
+    for(const it of items){
+      const y=Math.round(it.transform[5]);
+      if(!rows.has(y)) rows.set(y,[]);
+      rows.get(y).push({x:it.transform[4],s:it.str});
+    }
+    const lines=[...rows.entries()]
+      .sort((a,b)=>b[0]-a[0])
+      .map(([,cells])=>cells.sort((a,b)=>a.x-b.x).map(c=>c.s).join(''));
+    pages.push(lines.join('\n'));
   }
-  return text;
+  return pages.join('\n');
 }
 
+let _tenRawTexts=[];
 async function handleTenFiles(files){
   const listEl=document.getElementById('tenFileList');
   const preEl=document.getElementById('tenPreview');
+  _tenRawTexts=[];
+  if(typeof pdfjsLib==='undefined'){
+    listEl.innerHTML='<div style="color:#D63B3B;font-size:12px;padding:6px 0">❌ PDF.js 未載入，請確認網路連線後重新整理頁面</div>';
+    return;
+  }
   listEl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:4px 0">⏳ 解析中，請稍候…</div>';
   preEl.innerHTML=''; document.getElementById('tenGo').disabled=true;
   tenParsed={biao:null,suo:null,ta:[]};
@@ -2796,18 +2965,38 @@ async function handleTenFiles(files){
   for(const file of files){
     try{
       const text=await extractPdfText(file);
+      _tenRawTexts.push({name:file.name,text});
       const type=detectTenType(text);
       let label='❓ 無法識別';
       if(type==='biao'){tenParsed.biao=parseBiao(text);label='🏠 標示部';}
       else if(type==='suo'){tenParsed.suo=parseSuo(text);label='👤 所有權部';}
       else if(type==='ta'){const r=parseTa(text);tenParsed.ta.push(...r.loans);label='🏦 他項權利部';}
       else if(type==='land'){label='🌍 土地謄本（略過）';}
-      results.push({name:file.name,label});
-    }catch(e){results.push({name:file.name,label:'❌ 解析失敗'});}
+      results.push({name:file.name,label,idx:_tenRawTexts.length-1});
+    }catch(e){
+      _tenRawTexts.push({name:file.name,text:''});
+      results.push({name:file.name,label:'❌ '+(e.message||'解析失敗'),idx:_tenRawTexts.length-1});
+    }
   }
-  listEl.innerHTML=results.map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)"><span style="font-weight:600">${r.label}</span>　${r.name}</div>`).join('');
+  listEl.innerHTML=results.map(r=>`
+    <div style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-weight:600">${r.label}</span>
+        <span style="color:var(--t3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</span>
+        ${_tenRawTexts[r.idx]?.text?`<span onclick="tenToggleRaw(${r.idx})" style="cursor:pointer;color:var(--accent);font-size:10px;flex-shrink:0">原始▾</span>`:''}
+      </div>
+      <div id="tenRaw${r.idx}" style="display:none;margin-top:4px;background:var(--s2);border-radius:5px;padding:6px;font-size:10px;max-height:90px;overflow-y:auto;word-break:break-all;white-space:pre-wrap;color:var(--t3);line-height:1.5"></div>
+    </div>`).join('');
   renderTenPreview();
   document.getElementById('tenGo').disabled=false;
+}
+function tenToggleRaw(idx){
+  const el=document.getElementById('tenRaw'+idx);
+  if(!el) return;
+  if(el.style.display==='none'){
+    el.textContent=(_tenRawTexts[idx]?.text||'').slice(0,600);
+    el.style.display='block';
+  } else el.style.display='none';
 }
 
 function renderTenPreview(){
@@ -2952,6 +3141,35 @@ async function saveClient(){
     extraLoans:[...extraLoans],
     purpose:document.getElementById('fPurpose').value.trim(),
     loanPurpose:document.getElementById('ev_purpose')?.value?.trim()||'',
+    evalData:{
+      district:document.getElementById('ev_district')?.value||'',
+      section:document.getElementById('ev_section')?.value||'',
+      landno:document.getElementById('ev_landno')?.value||'',
+      landzone:document.getElementById('ev_landzone')?.value||'',
+      landtaxNormal:document.getElementById('ev_landtax_normal')?.value||'',
+      landtaxSelf:document.getElementById('ev_landtax_self')?.value||'',
+      buildno:document.getElementById('ev_buildno')?.value||'',
+      addr:document.getElementById('ev_addr')?.value||'',
+      community:document.getElementById('ev_community')?.value||'',
+      buildarea:document.getElementById('ev_buildarea')?.value||'',
+      landarea:document.getElementById('ev_landarea')?.value||'',
+      parking:document.getElementById('ev_parking')?.value||'無',
+      parkTitle:document.getElementById('ev_park_title')?.value||'非獨立',
+      parkval:document.getElementById('ev_park_val')?.value||'',
+      floors:document.getElementById('ev_floors')?.value||'',
+      age:document.getElementById('ev_age')?.value||'',
+      taxGeneral:document.getElementById('ev_tax_general')?.value||'',
+      taxSelf:document.getElementById('ev_tax_self')?.value||'',
+      taxCount:document.getElementById('ev_tax_count')?.value||'',
+      condition:document.getElementById('ev_condition')?.value||'',
+      resistance:document.getElementById('ev_resistance')?.value||'',
+      jinzhai:document.getElementById('ev_jinzhai')?.value||'',
+      unitprice:document.getElementById('ev_unitprice')?.value||'',
+      rate:document.getElementById('ev_rate')?.value||'',
+      job:document.getElementById('ev_job')?.value||'',
+      need:document.getElementById('ev_need')?.value||'',
+      evalNote:document.getElementById('ev_note')?.value||'',
+    },
     buildNo:document.getElementById('fBuildNo').value.trim(),
     landNo:document.getElementById('fLandNo').value.trim(),
     driveUrl:document.getElementById('fDriveUrl').value.trim(),
