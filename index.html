@@ -365,6 +365,8 @@ if(sessionStorage.getItem(PW_KEY)==='1'){
       <option value="heat">🔥 熱度</option>
       <option value="created">🕐 新增時間</option>
       <option value="addr">📍 地址縣市</option>
+      <option value="phone">📞 有電話優先</option>
+      <option value="lastlog">💬 最後聯絡紀錄</option>
     </select>
     <div style="position:relative;flex-shrink:0">
       <button id="cityFilterBtn" onclick="toggleCityFilter()" style="background:var(--s2);border:none;border-radius:var(--rs);padding:9px 10px;font-size:13px;color:var(--text);font-family:inherit;cursor:pointer;white-space:nowrap">🗺️ 縣市 <span id="cityFilterCount"></span></button>
@@ -1853,6 +1855,18 @@ function render(){
       const ca=getCityOrder(a.addr), cb=getCityOrder(b.addr);
       if(ca!==cb) return ca-cb;
       return (a.addr||'').localeCompare(b.addr||'');
+    } else if(sortBy==='phone'){
+      const pa=a.phone?0:1, pb=b.phone?0:1;
+      if(pa!==pb) return pa-pb;
+      const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
+      return ra-rb;
+    } else if(sortBy==='lastlog'){
+      const la=a.logs?.length?a.logs.reduce((m,l)=>l.date>m?l.date:m,''):'';
+      const lb=b.logs?.length?b.logs.reduce((m,l)=>l.date>m?l.date:m,''):'';
+      if(!la&&!lb) return 0;
+      if(!la) return 1;
+      if(!lb) return -1;
+      return lb.localeCompare(la);
     } else {
       const ra=rOrd[remSt(a.remind)]??4,rb=rOrd[remSt(b.remind)]??4;
       if(ra!==rb)return ra-rb;
